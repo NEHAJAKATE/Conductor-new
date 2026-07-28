@@ -11,7 +11,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Send,
-  LogOut 
+  LogOut,
+  UploadCloud
 } from 'lucide-react';
 import './sidebar.css';
 
@@ -39,6 +40,10 @@ export default function Sidebar() {
           <Link href="/" className={getNavClass('/')}>
             <Workflow size={18} />
             {!collapsed && <span>Live Workflow</span>}
+          </Link>
+          <Link href="/ingestion" className={getNavClass('/ingestion')}>
+            <UploadCloud size={18} />
+            {!collapsed && <span>Data Ingestion</span>}
           </Link>
           <Link href="/contexthouse" className={getNavClass('/contexthouse')}>
             <Database size={18} />
