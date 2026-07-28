@@ -1,5 +1,5 @@
 "use client";
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import ThemeToggle from '@/components/ThemeToggle';
 import { 
@@ -12,7 +12,68 @@ import {
 } from 'lucide-react';
 import './spiderbrain.css';
 
+interface RuleCardItem {
+  title: string;
+  desc: string;
+  target: string;
+  status: 'Ratified' | 'Pending Review';
+  updatedAt: string;
+}
+
 export default function SpiderbrainPage() {
+  const [rules, setRules] = useState<RuleCardItem[]>([
+    {
+      title: 'MQL Definition',
+      desc: "IF intent_score > 80 AND email NOT LIKE '%@gmail.com' THEN MQL = TRUE",
+      target: 'dim_known_profiles',
+      status: 'Ratified',
+      updatedAt: '2h ago'
+    },
+    {
+      title: 'VIP Customer',
+      desc: 'IF ltv > $10,000 OR active_subscriptions > 3 THEN VIP = TRUE',
+      target: 'fct_activation_metrics',
+      status: 'Ratified',
+      updatedAt: '1d ago'
+    },
+    {
+      title: 'Anonymous TTL Drop',
+      desc: 'IF last_seen < current_date - 90 days THEN Delete Profile',
+      target: 'dim_anonymous_profiles',
+      status: 'Pending Review',
+      updatedAt: '45m ago'
+    }
+  ]);
+
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadDynamicRules() {
+      try {
+        const res = await fetch('/api/v1/assets');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.silverList && data.silverList.length > 0) {
+            // Generate a rule for each dynamic conformed staging dataset
+            const newRules: RuleCardItem[] = data.silverList.map((item: any) => ({
+              title: `${item.name.replace(/^stg_/, '').toUpperCase()} Verification Rule`,
+              desc: `IF email IS NOT NULL AND phone REGEXP '^[0-9+]+$' THEN isValidEmailPhone = TRUE`,
+              target: item.name,
+              status: 'Ratified' as const,
+              updatedAt: 'Just conformed'
+            }));
+            setRules(prev => [...newRules, ...prev]);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load assets in Spiderbrain:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadDynamicRules();
+  }, []);
+
   return (
     <div className="app-layout">
       <Sidebar />
@@ -41,7 +102,7 @@ export default function SpiderbrainPage() {
             <div className="sb-stats">
               <div className="stat-box">
                 <div className="stat-label">Active Rules</div>
-                <div className="stat-value">142</div>
+                <div className="stat-value">{rules.length}</div>
               </div>
               <div className="stat-box">
                 <div className="stat-label">Centrality Avg</div>
@@ -63,41 +124,21 @@ export default function SpiderbrainPage() {
               </div>
               
               <div className="rule-list">
-                <div className="rule-card">
-                  <div className="rule-header">
-                    <h4>MQL Definition</h4>
-                    <span className="badge badge-certified"><CheckCircle2 size={12}/> Ratified</span>
+                {rules.map((rule, idx) => (
+                  <div key={idx} className="rule-card">
+                    <div className="rule-header">
+                      <h4>{rule.title}</h4>
+                      <span className={`badge ${rule.status === 'Ratified' ? 'badge-certified' : 'badge-pending'}`}>
+                        {rule.status === 'Ratified' && <CheckCircle2 size={12}/>} {rule.status}
+                      </span>
+                    </div>
+                    <p className="rule-desc">{rule.desc}</p>
+                    <div className="rule-meta">
+                      <span>Target: {rule.target}</span>
+                      <span>Last updated: {rule.updatedAt}</span>
+                    </div>
                   </div>
-                  <p className="rule-desc">IF intent_score {'>'} 80 AND email NOT LIKE '%@gmail.com' THEN MQL = TRUE</p>
-                  <div className="rule-meta">
-                    <span>Target: dim_known_profiles</span>
-                    <span>Last updated: 2h ago</span>
-                  </div>
-                </div>
-
-                <div className="rule-card">
-                  <div className="rule-header">
-                    <h4>VIP Customer</h4>
-                    <span className="badge badge-certified"><CheckCircle2 size={12}/> Ratified</span>
-                  </div>
-                  <p className="rule-desc">IF ltv {'>'} $10,000 OR active_subscriptions {'>'} 3 THEN VIP = TRUE</p>
-                  <div className="rule-meta">
-                    <span>Target: fct_activation_metrics</span>
-                    <span>Last updated: 1d ago</span>
-                  </div>
-                </div>
-
-                <div className="rule-card">
-                  <div className="rule-header">
-                    <h4>Anonymous TTL Drop</h4>
-                    <span className="badge badge-pending">Pending Review</span>
-                  </div>
-                  <p className="rule-desc">IF last_seen {'<'} current_date - 90 days THEN Delete Profile</p>
-                  <div className="rule-meta">
-                    <span>Target: dim_anonymous_profiles</span>
-                    <span>Last updated: 45m ago</span>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
 
