@@ -69,12 +69,21 @@ export class FolderConnector implements ConnectorPlugin {
     const list: Array<{ name: string; path: string; size: number }> = [];
 
     if (folderPath.startsWith('r2://')) {
-      const prefix = folderPath.replace(/^r2:\/\/[^\/]+\//, '');
+      let prefix = folderPath.replace(/^r2:\/\/[^\/]+\//, '');
+      const batchMatch = prefix.match(/(uploads\/[0-9]+-)/);
+      if (batchMatch) {
+        prefix = batchMatch[1];
+      } else {
+        const ext = path.extname(prefix);
+        if (ext) {
+          prefix = path.dirname(prefix) + '/';
+        }
+      }
       const simulationDir = path.resolve(process.cwd(), 'data', 'r2_simulation');
       if (fs.existsSync(simulationDir)) {
         const files = await fs.promises.readdir(simulationDir);
         for (const file of files) {
-          const simulatedKey = file.replace(/_/g, '/');
+          const simulatedKey = file.replace('_', '/');
           if (simulatedKey.startsWith(prefix)) {
             const stats = await fs.promises.stat(path.join(simulationDir, file));
             list.push({

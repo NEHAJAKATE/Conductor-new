@@ -157,7 +157,7 @@ export default function IngestionPage() {
   const [uploadedPath, setUploadedPath] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  const [folderFiles, setFolderFiles] = useState<Array<{ name: string; size: number; checked: boolean; type: string }>>([]);
+  const [folderFiles, setFolderFiles] = useState<Array<{ name: string; size: number; checked: boolean; type: string; fileObject?: File }>>([]);
   const [activeFileIndex, setActiveFileIndex] = useState<number>(0);
 
   const [gridSearch, setGridSearch] = useState('');
@@ -186,7 +186,11 @@ export default function IngestionPage() {
     const pollWorkflowStatus = async () => {
       try {
         const response = await fetch(`/api/v1/workflows/${workflowId}`);
-        if (!response.ok) throw new Error('Failed to fetch workflow');
+        if (!response.ok) {
+          console.warn(`[Ingestion] Workflow ${workflowId} not found or failed to fetch. Stopping polling.`);
+          clearInterval(pollInterval);
+          return;
+        }
         const data = await response.json() as WorkflowEntity;
         setWorkflow(data);
 
@@ -220,8 +224,8 @@ export default function IngestionPage() {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files) {
+      processSelectedFiles(e.dataTransfer.files);
     }
   };
 
@@ -238,27 +242,43 @@ export default function IngestionPage() {
     setFolderFiles([]);
   };
 
+  const processSelectedFiles = (files: FileList) => {
+    if (files.length === 0) return;
+
+    if (selectedConnector === 'folder' || files.length > 1) {
+      const fileList = Array.from(files).map(f => ({
+        name: f.name,
+        size: f.size,
+        checked: true,
+        type: f.name.split('.').pop() || 'csv',
+        fileObject: f
+      }));
+      setFolderFiles(fileList);
+      setFile(files[0]);
+      if (files.length > 1 && selectedConnector !== 'folder') {
+        setSelectedConnector('folder');
+      }
+    } else {
+      setFile(files[0]);
+    }
+  };
+
   const loadMockFolderWorkspace = () => {
-    const list = [
-      { name: 'customers.csv', size: 1024 * 128, checked: true, type: 'csv' },
-      { name: 'orders.csv', size: 1024 * 512, checked: true, type: 'csv' },
-      { name: 'products.xlsx', size: 1024 * 64, checked: true, type: 'xlsx' },
-      { name: 'events_log.json', size: 1024 * 32, checked: true, type: 'json' },
-      { name: 'metrics.parquet', size: 1024 * 256, checked: false, type: 'parquet' },
-    ];
-    setFolderFiles(list);
-    setFile(new File([], 'bulk_workspace_folder'));
-    setUploadedPath('sample-data/customers_contacts.csv');
+    setSelectedConnector('folder');
+    setTimeout(() => {
+      fileInputRef.current?.click();
+    }, 150);
   };
 
   const uploadFile = async () => {
-    if (!file) return;
+    const filesToUpload = selectedConnector === 'folder' && folderFiles.length > 0
+      ? folderFiles.filter(f => f.checked && f.fileObject).map(f => f.fileObject!)
+      : [file].filter(Boolean) as File[];
+
+    if (filesToUpload.length === 0) return;
 
     setIsUploading(true);
     setUploadProgress(10);
-
-    const formData = new FormData();
-    formData.append('file', file);
 
     const configParam = {
       bucket: bucketName,
@@ -270,20 +290,32 @@ export default function IngestionPage() {
     };
 
     try {
-      setUploadProgress(40);
-      const url = `/api/v1/uploads/${selectedConnector}?storageType=${storageType}&storageConfig=${encodeURIComponent(JSON.stringify(configParam))}`;
-      const response = await fetch(url, {
-        method: 'POST',
-        body: formData,
-      });
+      let completedCount = 0;
+      let lastUploadedPath = '';
 
-      if (!response.ok) {
-        throw new Error('Upload failed with status ' + response.status);
+      for (const currentFile of filesToUpload) {
+        const formData = new FormData();
+        formData.append('file', currentFile);
+
+        const url = `/api/v1/uploads/${selectedConnector}?storageType=${storageType}&storageConfig=${encodeURIComponent(JSON.stringify(configParam))}`;
+        const response = await fetch(url, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Upload failed for ${currentFile.name} with status ${response.status}`);
+        }
+
+        const result = await response.json();
+        lastUploadedPath = result.path;
+        
+        completedCount++;
+        setUploadProgress(Math.round((completedCount / filesToUpload.length) * 90) + 10);
       }
 
-      const result = await response.json();
       setUploadProgress(100);
-      setUploadedPath(result.path);
+      setUploadedPath(lastUploadedPath);
       setIsUploading(false);
     } catch (error) {
       console.error(error);
@@ -687,7 +719,18 @@ export default function IngestionPage() {
                           type="file" 
                           ref={fileInputRef} 
                           style={{ display: 'none' }} 
-                          onChange={(e) => setFile(e.target.files?.[0] ?? null)} 
+                          {...(selectedConnector === 'folder' ? {
+                            webkitdirectory: "true",
+                            directory: "true",
+                            multiple: true
+                          } as any : {
+                            multiple: true
+                          })}
+                          onChange={(e) => {
+                            if (e.target.files) {
+                              processSelectedFiles(e.target.files);
+                            }
+                          }} 
                         />
                         
                         <div className="dropzone-inner">
