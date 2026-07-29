@@ -860,7 +860,7 @@ export default function Customer360Page() {
                           <div className="c360-card" style={{ padding: '12px' }}>
                             <div className="label" style={{ fontSize: '10px' }}>Total Invoiced</div>
                             <div style={{ fontSize: '20px', fontWeight: 'bold', color: 'var(--text-loud)', marginTop: '4px' }}>
-                              ${selectedProfile.financial.invoices?.reduce((a: any, c: any) => a + c.amount, 0).toLocaleString() || 0}
+                              ${(selectedProfile.financial.invoices?.reduce((a: any, c: any) => a + c.amount, 0) || 0).toLocaleString()}
                             </div>
                           </div>
                           <div className="c360-card" style={{ padding: '12px' }}>
