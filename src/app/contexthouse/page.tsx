@@ -135,9 +135,9 @@ export default function ContexthousePage() {
             
             <div className="tree-group">
               <div className="tree-group-title"><HardDrive size={14}/> Bronze Lake (Raw)</div>
-              {bronzeList.map(item => (
+              {bronzeList.map((item, idx) => (
                 <div 
-                  key={item.name} 
+                  key={`${item.name}-${idx}`} 
                   className={`tree-item ${activeCatalog === item.name ? 'active' : ''}`}
                   onClick={() => handleSelectItem(item.name, 'bronze')}
                 >
@@ -148,9 +148,9 @@ export default function ContexthousePage() {
 
             <div className="tree-group">
               <div className="tree-group-title"><Layers size={14}/> Silver Lake (Norm)</div>
-              {silverList.map(item => (
+              {silverList.map((item, idx) => (
                 <div 
-                  key={item.name} 
+                  key={`${item.name}-${idx}`} 
                   className={`tree-item ${activeCatalog === item.name ? 'active' : ''}`}
                   onClick={() => handleSelectItem(item.name, 'silver')}
                 >
