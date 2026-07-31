@@ -19,10 +19,10 @@ import {
   HelpCircle,
   Fingerprint
 } from 'lucide-react';
-import { GoldenCustomerProfile } from '../../core/customer360/domain/types';
+import { UnifiedCustomerProfile } from '../../core/customer360/domain/types';
 
 interface IdentityGraphProps {
-  profile: GoldenCustomerProfile;
+  profile: UnifiedCustomerProfile;
 }
 
 export default function IdentityGraph({ profile }: IdentityGraphProps) {
@@ -39,7 +39,7 @@ export default function IdentityGraph({ profile }: IdentityGraphProps) {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-primary)', fontWeight: 'bold' }}>
               <Sparkles size={14} className="animate-pulse" />
-              <span>GOLDEN CUSTOMER</span>
+              <span>UNIFIED CUSTOMER</span>
             </div>
             <div style={{ fontSize: '10px', color: 'var(--text-loud)', fontFamily: 'monospace' }}>
               {profile.uuid.slice(0, 16)}...
@@ -199,14 +199,14 @@ export default function IdentityGraph({ profile }: IdentityGraphProps) {
 
   // Define edges with relationship labels
   const initialEdges = [
-    // Source linkages to Golden Record
+    // Source linkages to Unified Profile
     { id: 'e-crm-golden', source: 'src-crm', target: 'golden-uuid', animated: true, label: 'CRM Identity Link', style: { stroke: 'var(--accent-secondary)', strokeWidth: 1.5 }, labelStyle: { fill: 'var(--text-muted)', fontSize: 9 } },
     { id: 'e-website-golden', source: 'src-website', target: 'golden-uuid', animated: true, label: 'Email Cookie Match', style: { stroke: 'var(--accent-secondary)', strokeWidth: 1.5 }, labelStyle: { fill: 'var(--text-muted)', fontSize: 9 } },
     { id: 'e-finance-golden', source: 'src-finance', target: 'golden-uuid', animated: true, label: 'PAN Ingestion Match', style: { stroke: 'var(--accent-secondary)', strokeWidth: 1.5 }, labelStyle: { fill: 'var(--text-muted)', fontSize: 9 } },
     { id: 'e-support-golden', source: 'src-support', target: 'golden-uuid', animated: true, label: 'Email Helpdesk Link', style: { stroke: 'var(--accent-secondary)', strokeWidth: 1.5 }, labelStyle: { fill: 'var(--text-muted)', fontSize: 9 } },
     { id: 'e-marketing-golden', source: 'src-marketing', target: 'golden-uuid', animated: true, label: 'Campaign Click Match', style: { stroke: 'var(--accent-secondary)', strokeWidth: 1.5 }, labelStyle: { fill: 'var(--text-muted)', fontSize: 9 } },
 
-    // Golden Record identifiers mapping
+    // Unified Profile identifiers mapping
     { id: 'e-golden-email', source: 'golden-uuid', target: 'id-email', label: 'Primary Email', style: { stroke: 'var(--accent-primary)', strokeWidth: 1.5 }, labelStyle: { fill: 'var(--text-muted)', fontSize: 9 } },
     { id: 'e-golden-phone', source: 'golden-uuid', target: 'id-phone', label: 'Primary Phone', style: { stroke: 'var(--accent-primary)', strokeWidth: 1.5 }, labelStyle: { fill: 'var(--text-muted)', fontSize: 9 } },
     { id: 'e-golden-pan', source: 'golden-uuid', target: 'id-pan', label: 'Verified PAN', style: { stroke: 'var(--accent-primary)', strokeWidth: 1.5 }, labelStyle: { fill: 'var(--text-muted)', fontSize: 9 } },
@@ -225,11 +225,11 @@ export default function IdentityGraph({ profile }: IdentityGraphProps) {
       });
     } else {
       setSelectedNode({
-        label: 'Golden UUID Profile',
-        desc: 'Permanent Golden Customer profile containing verified identifiers from multiple connected records.',
+        label: 'Unified Customer Profile',
+        desc: 'Permanent Unified Customer profile containing verified identifiers from multiple connected records.',
         icon: Sparkles,
         details: {
-          'Golden UUID': profile.uuid,
+          'Customer ID': profile.uuid,
           'Resolution Engine': 'Rule-based stitcher',
           'Confidence Rating': `${profile.confidence}%`,
           'Lineage Sources': 'CRM, Web, Stripe, Support, Campaigns'
@@ -246,12 +246,12 @@ export default function IdentityGraph({ profile }: IdentityGraphProps) {
             <Layers size={16} /> Upgraded Enterprise Identity Graph
           </h4>
           <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Interactive xyflow canvas showing connected channels, matching rules, and verified identifier nodes resolved to the Golden UUID.
+            Interactive xyflow canvas showing connected channels, matching rules, and verified identifier nodes resolved to the Customer ID.
           </p>
         </div>
         <div style={{ display: 'flex', gap: '12px', fontSize: '11px' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--accent-primary)' }}>
-            ● Golden Profile
+            ● Unified Profile
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--accent-secondary)' }}>
             ● Ingest Source
@@ -284,7 +284,7 @@ export default function IdentityGraph({ profile }: IdentityGraphProps) {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--grid-line-minor)', paddingBottom: '10px', marginBottom: '12px' }}>
                 <selectedNode.icon size={16} style={{ color: 'var(--accent-primary)' }} />
                 <h5 style={{ margin: 0, fontSize: '13px', color: 'var(--text-loud)' }}>
-                  {typeof selectedNode.label === 'string' ? selectedNode.label : 'Golden record'}
+                  {typeof selectedNode.label === 'string' ? selectedNode.label : 'Unified record'}
                 </h5>
               </div>
               <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px' }}>
@@ -302,7 +302,7 @@ export default function IdentityGraph({ profile }: IdentityGraphProps) {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>
               <Info size={24} style={{ marginBottom: '8px' }} />
-              <p style={{ fontSize: '12px' }}>Click any node on the graph canvas (CRM, Stripe, Web, or Golden Record) to inspect metadata and matching rules.</p>
+              <p style={{ fontSize: '12px' }}>Click any node on the graph canvas (CRM, Stripe, Web, or Unified Record) to inspect metadata and matching rules.</p>
             </div>
           )}
         </div>

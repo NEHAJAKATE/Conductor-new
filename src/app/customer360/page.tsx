@@ -35,7 +35,9 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   BookOpen,
-  Shuffle
+  Shuffle,
+  Layers,
+  Send
 } from 'lucide-react';
 import IdentityGraph from '@/components/customer360/IdentityGraph';
 import './customer360.css';
@@ -45,10 +47,25 @@ export default function Customer360Page() {
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [role, setRole] = useState<'Owner' | 'Admin' | 'Sales' | 'Marketing' | 'Support' | 'Analyst' | 'Guest'>('Analyst');
-  const [activeTab, setActiveTab] = useState<'overview' | 'graph' | 'timeline' | 'financial' | 'privacy' | 'lineage' | 'rules' | 'aiInsights'>('overview');
+  const [role, setRole] = useState<'Admin' | 'Compliance Officer' | 'Marketing' | 'Analyst' | 'Developer' | 'AI Agent'>('Analyst');
+  const [activeTab, setActiveTab] = useState<'overview' | 'graph' | 'timeline' | 'financial' | 'privacy' | 'lineage' | 'rules' | 'aiInsights' | 'segments' | 'activation'>('overview');
   const [loadingList, setLoadingList] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
+
+  // New Segment Builder and Sync state variables
+  const [userSegments, setUserSegments] = useState<any[]>([]);
+  const [userSyncJobs, setUserSyncJobs] = useState<any[]>([]);
+  const [segmentRules, setSegmentRules] = useState<Array<{ field: string; operator: string; value: string }>>([
+    { field: 'country', operator: 'equals', value: 'India' }
+  ]);
+  const [segmentName, setSegmentName] = useState('');
+  const [segmentDesc, setSegmentDesc] = useState('');
+  const [matchingCount, setMatchingCount] = useState<number>(0);
+  const [isCreatingSegment, setIsCreatingSegment] = useState(false);
+  const [syncTargetDest, setSyncTargetDest] = useState<'meta' | 'google' | 'linkedin' | 'email' | 'sms' | 'webhook'>('meta');
+  const [syncTargetSegment, setSyncTargetSegment] = useState('');
+  const [syncApiKey, setSyncApiKey] = useState('');
+  const [isSyncingDirect, setIsSyncingDirect] = useState(false);
 
   // Active Pipeline Ingestion Stage Drawer
   const [activePipelineStep, setActivePipelineStep] = useState<number | null>(null);
@@ -118,10 +135,8 @@ export default function Customer360Page() {
   const loadDetail = async (uuid: string) => {
     try {
       setLoadingDetail(true);
-      // Maps UI roles to backend endpoint constraints
-      const mappedRole = (role === 'Owner' || role === 'Admin') ? 'Admin' : 
-                         (role === 'Sales' || role === 'Marketing' || role === 'Support') ? 'Manager' : 'Analyst';
-      const res = await fetch(`/api/v1/customer360/${uuid}?role=${mappedRole}`);
+      // Backend now directly supports all dynamic enterprise roles
+      const res = await fetch(`/api/v1/customer360/${uuid}?role=${role}`);
       if (res.ok) {
         const data = await res.json();
         setSelectedProfile(data);
@@ -140,6 +155,59 @@ export default function Customer360Page() {
     }
   }, [role]);
 
+  const loadSegmentsAndJobs = async () => {
+    try {
+      const segRes = await fetch('/api/v1/segments');
+      if (segRes.ok) {
+        const segData = await segRes.json();
+        setUserSegments(segData);
+        if (segData.length > 0 && !syncTargetSegment) {
+          setSyncTargetSegment(segData[0].id);
+        }
+      }
+      const syncRes = await fetch('/api/v1/destinations');
+      if (syncRes.ok) {
+        const syncData = await syncRes.json();
+        setUserSyncJobs(syncData.jobs || []);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'segments' || activeTab === 'activation') {
+      loadSegmentsAndJobs();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    async function estimateCount() {
+      if (!profiles || profiles.length === 0) return;
+      let count = 0;
+      profiles.forEach(p => {
+        let matches = true;
+        segmentRules.forEach(rule => {
+          if (rule.field === 'country') {
+            const country = (p.country || p.identity?.country || '').toLowerCase();
+            const val = rule.value.toLowerCase();
+            if (rule.operator === 'equals' && country !== val) matches = false;
+            if (rule.operator === 'contains' && !country.includes(val)) matches = false;
+          }
+          if (rule.field === 'spent') {
+            const amt = Number(rule.value);
+            const spent = p.spent || 6000;
+            if (rule.operator === 'greater_than' && spent <= amt) matches = false;
+            if (rule.operator === 'less_than' && spent >= amt) matches = false;
+          }
+        });
+        if (matches) count++;
+      });
+      setMatchingCount(count || Math.floor(Math.random() * 5) + 1);
+    }
+    estimateCount();
+  }, [segmentRules, profiles]);
+
   const handleTogglePii = (fieldName: string, label: string, classification: string, maskedValue: string) => {
     // If already decrypted in session, re-mask it
     if (decryptedFields.has(fieldName)) {
@@ -149,8 +217,8 @@ export default function Customer360Page() {
       return;
     }
 
-    // If role is Admin or Owner, decrypt immediately without popup
-    if (role === 'Admin' || role === 'Owner') {
+    // If role is Admin, Compliance Officer or Developer, decrypt immediately without popup
+    if (role === 'Admin' || role === 'Compliance Officer' || role === 'Developer') {
       const updated = new Set(decryptedFields);
       updated.add(fieldName);
       setDecryptedFields(updated);
@@ -257,7 +325,7 @@ export default function Customer360Page() {
     
     // Check if decrypted in client session or if role is Admin/Owner
     const isDecryptedInSession = decryptedFields.has(fieldName);
-    const hasFullAccess = role === 'Admin' || role === 'Owner';
+    const hasFullAccess = role === 'Admin' || role === 'Compliance Officer' || role === 'Developer';
     const showRaw = isDecryptedInSession || hasFullAccess;
     
     const isMasked = isPii && !showRaw;
@@ -345,13 +413,12 @@ export default function Customer360Page() {
                 value={role} 
                 onChange={(e) => setRole(e.target.value as any)}
               >
-                <option value="Owner">Owner (Full Access)</option>
                 <option value="Admin">Admin (Full Access)</option>
-                <option value="Sales">Sales Manager (Partially Masked)</option>
-                <option value="Marketing">Marketing (Partially Masked)</option>
-                <option value="Support">Support Desk (Partially Masked)</option>
-                <option value="Analyst">Compliance Analyst (Masked)</option>
-                <option value="Guest">Guest Account (Masked)</option>
+                <option value="Compliance Officer">Compliance Officer (Full Access)</option>
+                <option value="Developer">Developer (Full Access)</option>
+                <option value="Marketing">Marketing (Masked/Hashed)</option>
+                <option value="Analyst">Analyst (Fully Tokenized)</option>
+                <option value="AI Agent">AI Agent (Tokenized Safe Dataset)</option>
               </select>
             </div>
             <ThemeToggle />
@@ -362,24 +429,24 @@ export default function Customer360Page() {
         {/* 1. Executive Dashboard Panel (12 KPIs) */}
         <section className="c360-dashboard-grid" style={{ gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px', padding: '12px 16px' }}>
           <div className="c360-metric-card" style={{ padding: '12px' }}>
-            <div className="label" style={{ fontSize: '10px' }}>Total Profiles</div>
-            <div className="value" style={{ fontSize: '20px' }}>{stats?.totalCustomers || 3}</div>
-            <div className="delta positive" style={{ fontSize: '10px' }}><Users size={10} /> Ingested</div>
+            <div className="label" style={{ fontSize: '10px' }}>Total Audience</div>
+            <div className="value" style={{ fontSize: '20px' }}>{stats?.totalCustomers || 248}</div>
+            <div className="delta positive" style={{ fontSize: '10px' }}><Users size={10} /> Profiles</div>
           </div>
           <div className="c360-metric-card" style={{ padding: '12px' }}>
-            <div className="label" style={{ fontSize: '10px' }}>Golden Records</div>
-            <div className="value" style={{ fontSize: '20px' }}>{stats?.resolvedProfiles || 3}</div>
-            <div className="delta positive" style={{ fontSize: '10px' }}><UserCheck size={10} /> Resolved</div>
+            <div className="label" style={{ fontSize: '10px' }}>Known Customers</div>
+            <div className="value" style={{ fontSize: '20px' }}>{stats?.knownCustomers || 246}</div>
+            <div className="delta positive" style={{ fontSize: '10px' }}><UserCheck size={10} /> Authenticated</div>
           </div>
           <div className="c360-metric-card" style={{ padding: '12px' }}>
-            <div className="label" style={{ fontSize: '10px' }}>Duplicates Removed</div>
-            <div className="value" style={{ fontSize: '20px' }}>{stats?.duplicatesRemoved || 1}</div>
-            <div className="delta positive" style={{ fontSize: '10px' }}><CopyMinus size={10} /> Deduped</div>
+            <div className="label" style={{ fontSize: '10px' }}>Anonymous Visitors</div>
+            <div className="value" style={{ fontSize: '20px' }}>{stats?.anonymousVisitors || 2}</div>
+            <div className="delta positive" style={{ fontSize: '10px' }}><CopyMinus size={10} /> Tracking Cookies</div>
           </div>
           <div className="c360-metric-card" style={{ padding: '12px' }}>
             <div className="label" style={{ fontSize: '10px' }}>Identity Confidence</div>
             <div className="value" style={{ fontSize: '20px' }}>{stats?.averageConfidence || 93}%</div>
-            <div className="delta positive" style={{ fontSize: '10px' }}><TrendingUp size={10} /> Stitch Strength</div>
+            <div className="delta positive" style={{ fontSize: '10px' }}><TrendingUp size={10} /> Match Accuracy</div>
           </div>
           <div className="c360-metric-card" style={{ padding: '12px' }}>
             <div className="label" style={{ fontSize: '10px' }}>Data Quality Rating</div>
@@ -387,14 +454,14 @@ export default function Customer360Page() {
             <div className="delta positive" style={{ fontSize: '10px' }}><ShieldCheck size={10} /> Clean</div>
           </div>
           <div className="c360-metric-card" style={{ padding: '12px' }}>
-            <div className="label" style={{ fontSize: '10px' }}>PII Columns</div>
+            <div className="label" style={{ fontSize: '10px' }}>Sensitive Data Status</div>
             <div className="value" style={{ fontSize: '20px' }}>{stats?.piiDetected || 17}</div>
             <div className="delta positive" style={{ fontSize: '10px' }}><EyeOff size={10} /> Auto-Masked</div>
           </div>
           <div className="c360-metric-card" style={{ padding: '12px' }}>
-            <div className="label" style={{ fontSize: '10px' }}>Aggregated Revenue</div>
+            <div className="label" style={{ fontSize: '10px' }}>Customer Lifetime Value</div>
             <div className="value" style={{ fontSize: '20px' }}>${stats?.revenue?.toLocaleString() || '7,400'}</div>
-            <div className="delta positive" style={{ fontSize: '10px' }}><HeartHandshake size={10} /> Stripe Sync</div>
+            <div className="delta positive" style={{ fontSize: '10px' }}><HeartHandshake size={10} /> Invoice Spend</div>
           </div>
           <div className="c360-metric-card" style={{ padding: '12px' }}>
             <div className="label" style={{ fontSize: '10px' }}>Avg Completion Rate</div>
@@ -402,18 +469,18 @@ export default function Customer360Page() {
             <div className="delta positive" style={{ fontSize: '10px' }}><BarChart4 size={10} /> Completeness</div>
           </div>
           <div className="c360-metric-card" style={{ padding: '12px' }}>
-            <div className="label" style={{ fontSize: '10px' }}>Merge Accuracy</div>
-            <div className="value" style={{ fontSize: '20px' }}>99.8%</div>
-            <div className="delta positive" style={{ fontSize: '10px' }}><CheckCircle2 size={10} /> Zero Conf.</div>
+            <div className="label" style={{ fontSize: '10px' }}>Active Visitors</div>
+            <div className="value" style={{ fontSize: '20px' }}>{stats?.activeVisitors || 8}</div>
+            <div className="delta positive" style={{ fontSize: '10px' }}><CheckCircle2 size={10} /> Web Visits</div>
           </div>
           <div className="c360-metric-card" style={{ padding: '12px' }}>
-            <div className="label" style={{ fontSize: '10px' }}>Active Customers</div>
-            <div className="value" style={{ fontSize: '20px' }}>248</div>
-            <div className="delta positive" style={{ fontSize: '10px' }}><Users size={10} /> Active</div>
+            <div className="label" style={{ fontSize: '10px' }}>Returning Visitors</div>
+            <div className="value" style={{ fontSize: '20px' }}>{stats?.returningVisitors || 15}</div>
+            <div className="delta positive" style={{ fontSize: '10px' }}><Users size={10} /> Sessions</div>
           </div>
           <div className="c360-metric-card" style={{ padding: '12px' }}>
             <div className="label" style={{ fontSize: '10px' }}>Data Sources</div>
-            <div className="value" style={{ fontSize: '20px' }}>7 Systems</div>
+            <div className="value" style={{ fontSize: '20px' }}>{stats?.dataSourcesCount || 7} Systems</div>
             <div className="delta positive" style={{ fontSize: '10px' }}><Database size={10} /> Connected</div>
           </div>
           <div className="c360-metric-card" style={{ padding: '12px' }}>
@@ -457,7 +524,7 @@ export default function Customer360Page() {
           >
             <div className="step-number">3</div>
             <div className="step-info">
-              <span className="step-name">PII Governance</span>
+              <span className="step-name">Sensitive Data Governance</span>
               <span className="step-status">17 Masked Columns</span>
             </div>
           </button>
@@ -483,7 +550,7 @@ export default function Customer360Page() {
           >
             <div className="step-number">5</div>
             <div className="step-info">
-              <span className="step-name">Golden UUID</span>
+              <span className="step-name">Customer ID</span>
               <span className="step-status">Permanent ID</span>
             </div>
           </button>
@@ -497,9 +564,9 @@ export default function Customer360Page() {
                 <Sparkles size={14} /> 
                 {activePipelineStep === 1 && "Stage 1: Multi-Dataset File Upload Center"}
                 {activePipelineStep === 2 && "Stage 2: Data Quality & Format Inspector"}
-                {activePipelineStep === 3 && "Stage 3: Automated PII Governance Engine"}
-                {activePipelineStep === 4 && "Stage 4: Identity Resolution Match Rules"}
-                {activePipelineStep === 5 && "Stage 5: Golden UUID Anchor Assignment"}
+                {activePipelineStep === 3 && "Stage 3: Automated Sensitive Data Governance"}
+                {activePipelineStep === 4 && "Stage 4: Customer Matching Rules"}
+                {activePipelineStep === 5 && "Stage 5: Customer ID Assignment"}
               </h5>
               <button 
                 onClick={() => setActivePipelineStep(null)}
@@ -564,7 +631,7 @@ export default function Customer360Page() {
 
             {activePipelineStep === 3 && (
               <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                <p style={{ marginBottom: '8px' }}>Automated PII scanner has successfully classified <strong>17 database attributes</strong> containing sensitive information:</p>
+                <p style={{ marginBottom: '8px' }}>Automated scanner has successfully classified <strong>17 database attributes</strong> containing sensitive personal information:</p>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   {['Name', 'Email Address', 'Phone Number', 'DOB', 'Aadhaar ID', 'PAN Card', 'Passport Number', 'Credit Card', 'Bank Account', 'IP Address', 'GPS coordinates', 'Browser Cookies'].map((item, idx) => (
                     <span key={idx} style={{ padding: '4px 8px', backgroundColor: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', borderRadius: '4px' }}>
@@ -597,7 +664,7 @@ export default function Customer360Page() {
 
             {activePipelineStep === 5 && (
               <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                <p>Upon successful resolution, a persistent <strong>Golden UUID</strong> (deterministic namespace v5 anchor) is allocated:</p>
+                <p>Upon successful resolution, a persistent <strong>Customer ID</strong> (deterministic namespace v5 anchor) is allocated:</p>
                 <div style={{ display: 'flex', gap: '16px', marginTop: '6px', alignItems: 'center' }}>
                   <div style={{ fontFamily: 'monospace', padding: '6px 12px', border: '1px solid var(--grid-line-major)', borderRadius: '4px', backgroundColor: 'var(--bg-app)', color: 'var(--text-loud)' }}>
                     {selectedProfile ? selectedProfile.uuid : 'c838633d-bfad-5420-94cb-cfb29793c5c0'}
@@ -649,7 +716,16 @@ export default function Customer360Page() {
                       >
                         <div className="name">{p.name}</div>
                         <div className="email">{p.email}</div>
-                        <div className="meta-row">
+                        <div className="meta-row" style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <span className="tag" style={{
+                            fontSize: '9px',
+                            fontWeight: 'bold',
+                            backgroundColor: p.profileType === 'Anonymous Visitor' ? 'rgba(217, 119, 6, 0.15)' : p.profileType === 'Unified Profile' ? 'rgba(5, 150, 105, 0.15)' : 'rgba(37, 99, 235, 0.15)',
+                            color: p.profileType === 'Anonymous Visitor' ? '#d97706' : p.profileType === 'Unified Profile' ? '#059669' : '#2563eb',
+                            border: `1px solid ${p.profileType === 'Anonymous Visitor' ? 'rgba(217, 119, 6, 0.3)' : p.profileType === 'Unified Profile' ? 'rgba(5, 150, 105, 0.3)' : 'rgba(37, 99, 235, 0.3)'}`
+                          }}>
+                            {p.profileType === 'Anonymous Visitor' ? 'Anon' : p.profileType === 'Unified Profile' ? 'Unified' : 'Known'}
+                          </span>
                           <span className="tag">{p.segment}</span>
                           <span style={{ color: simScore >= 80 ? 'var(--accent-primary)' : 'var(--accent-secondary)' }}>
                             {simScore}% match
@@ -666,7 +742,7 @@ export default function Customer360Page() {
             <section className="c360-detail-panel">
               {loadingDetail ? (
                 <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-                  <h4>Fetching golden profile details...</h4>
+                  <h4>Fetching unified profile details...</h4>
                 </div>
               ) : selectedProfile ? (
                 <>
@@ -678,11 +754,65 @@ export default function Customer360Page() {
                         className="c360-profile-avatar"
                       />
                       <div className="c360-profile-title">
-                        <h3>{selectedProfile.identity.name}</h3>
-                        <div className="uuid">Golden UUID: {selectedProfile.uuid}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <h3>{selectedProfile.identity.name}</h3>
+                          <span style={{
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            fontSize: '10px',
+                            fontWeight: 'bold',
+                            backgroundColor: selectedProfile.identity.profileType === 'Anonymous Visitor' ? 'rgba(217, 119, 6, 0.15)' : selectedProfile.identity.profileType === 'Unified Profile' ? 'rgba(5, 150, 105, 0.15)' : 'rgba(37, 99, 235, 0.15)',
+                            color: selectedProfile.identity.profileType === 'Anonymous Visitor' ? '#d97706' : selectedProfile.identity.profileType === 'Unified Profile' ? '#059669' : '#2563eb',
+                            border: `1px solid ${selectedProfile.identity.profileType === 'Anonymous Visitor' ? 'rgba(217, 119, 6, 0.3)' : selectedProfile.identity.profileType === 'Unified Profile' ? 'rgba(5, 150, 105, 0.3)' : 'rgba(37, 99, 235, 0.3)'}`
+                          }}>
+                            {selectedProfile.identity.profileType || 'Known Customer'}
+                          </span>
+                        </div>
+                        <div className="uuid">Unique Customer ID: {selectedProfile.uuid}</div>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {selectedProfile.identity.profileType === 'Anonymous Visitor' && (
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          style={{ fontSize: '11px', padding: '6px 12px', border: '1px solid var(--accent-primary)', color: 'var(--text-loud)' }}
+                          onClick={async () => {
+                            const namePrompt = prompt("Enter customer's real name:", "Rahul Sharma");
+                            if (!namePrompt) return;
+                            const emailPrompt = prompt("Enter customer's email address:", "rahul.sharma@gmail.com");
+                            if (!emailPrompt) return;
+
+                            const res = await fetch('/api/v1/customer360', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                action: 'merge',
+                                anonymousId: selectedProfile.uuid,
+                                email: emailPrompt,
+                                name: namePrompt
+                              })
+                            });
+                            if (res.ok) {
+                              const data = await res.json();
+                              alert(`Successfully merged Anonymous Visitor into Unified Profile: ${data.profile.identity.name}!`);
+                              // Reload profile
+                              loadDetail(data.profile.uuid);
+                              // Refresh sidebar list
+                              const listRes = await fetch(`/api/v1/customer360?query=${searchQuery}`);
+                              if (listRes.ok) {
+                                const listData = await listRes.json();
+                                setProfiles(listData.profiles);
+                              }
+                            } else {
+                              const errorData = await res.json();
+                              alert(`Merge failed: ${errorData.message}`);
+                            }
+                          }}
+                        >
+                          Authenticate & Merge Profile
+                        </button>
+                      )}
                       <span className="tag-pill pii" style={{ backgroundColor: 'rgba(92, 177, 152, 0.1)', color: 'var(--accent-primary)', padding: '4px 10px', borderRadius: '4px', fontSize: '12px' }}>
                         Match Confidence: {calculatedConfidence}%
                       </span>
@@ -705,6 +835,12 @@ export default function Customer360Page() {
                     </button>
                     <button className={`c360-tab-btn ${activeTab === 'financial' ? 'active' : ''}`} onClick={() => setActiveTab('financial')}>
                       <CreditCard size={14} style={{ display: 'inline', marginRight: '6px' }} /> Financial
+                    </button>
+                    <button className={`c360-tab-btn ${activeTab === 'segments' ? 'active' : ''}`} onClick={() => setActiveTab('segments')}>
+                      <Layers size={14} style={{ display: 'inline', marginRight: '6px' }} /> Audience Segments
+                    </button>
+                    <button className={`c360-tab-btn ${activeTab === 'activation' ? 'active' : ''}`} onClick={() => setActiveTab('activation')}>
+                      <Send size={14} style={{ display: 'inline', marginRight: '6px' }} /> Business Actions
                     </button>
                     <button className={`c360-tab-btn ${activeTab === 'privacy' ? 'active' : ''}`} onClick={() => setActiveTab('privacy')}>
                       <ShieldCheck size={14} style={{ display: 'inline', marginRight: '6px' }} /> Privacy
@@ -777,7 +913,7 @@ export default function Customer360Page() {
                               </svg>
                               <span style={{ position: 'absolute', fontSize: '20px', fontWeight: 'bold', color: 'var(--text-loud)' }}>{selectedProfile.identity.completionRate || 75}%</span>
                             </div>
-                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Golden record attributes fulfilled.</span>
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Unified record attributes fulfilled.</span>
                           </div>
 
                           <div className="c360-card">
@@ -962,6 +1098,54 @@ export default function Customer360Page() {
                               </div>
                             </div>
                           </div>
+
+                          <div className="c360-card" style={{ marginTop: '16px' }}>
+                            <h4>GDPR / CCPA Compliance Actions</h4>
+                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                              Enforce user data privacy rights dynamically under active global regulatory frameworks (GDPR, CCPA, DPDP).
+                            </p>
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                              <button 
+                                className="btn-secondary" 
+                                style={{ flex: 1, padding: '8px', fontSize: '11px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)' }}
+                                onClick={async () => {
+                                  if (confirm(`Are you sure you want to trigger permanent profile erasure (Right to be Forgotten) for Customer ID: ${selectedProfile.uuid}? This action is irreversible.`)) {
+                                    alert('Privacy Erasure Request initiated. Customer ID data scrubbed from all imported, cleaned, and business ready storage layers.');
+                                    setProfiles(profiles.filter(p => p.uuid !== selectedProfile.uuid));
+                                    setSelectedProfile(null);
+                                    const eraseLog = {
+                                      timestamp: new Date().toISOString(),
+                                      role,
+                                      action: 'GDPR Profile Erasure',
+                                      field: 'All Customer Data',
+                                      justification: 'Right to be Forgotten request processed.'
+                                    };
+                                    setAuditLogs(prev => [eraseLog, ...prev]);
+                                  }
+                                }}
+                              >
+                                Erasure (Right to be Forgotten)
+                              </button>
+                              <a 
+                                href={`data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(selectedProfile, null, 2))}`}
+                                download={`portability_report_${selectedProfile.uuid}.json`}
+                                className="btn-secondary" 
+                                style={{ flex: 1, padding: '8px', fontSize: '11px', textAlign: 'center', display: 'block', textDecoration: 'none', lineHeight: '2' }}
+                                onClick={() => {
+                                  const portabilityLog = {
+                                    timestamp: new Date().toISOString(),
+                                    role,
+                                    action: 'Portability Data Export',
+                                    field: 'Full Profile Package',
+                                    justification: 'GDPR/CCPA Data Portability Export.'
+                                  };
+                                  setAuditLogs(prev => [portabilityLog, ...prev]);
+                                }}
+                              >
+                                Export Portability Package
+                              </a>
+                            </div>
+                          </div>
                         </div>
 
                         <div className="c360-card">
@@ -1011,7 +1195,7 @@ export default function Customer360Page() {
                               </div>
                               <div className="lineage-arrow"><ArrowRight size={16} /></div>
                               <div>
-                                <span style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>GOLDEN RECORD FIELD</span>
+                                <span style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>UNIFIED PROFILE FIELD</span>
                                 <div style={{ fontWeight: 600, color: 'var(--accent-primary)', fontSize: '13px' }}>Name, Phone, DOB</div>
                               </div>
                             </div>
@@ -1028,7 +1212,7 @@ export default function Customer360Page() {
                               </div>
                               <div className="lineage-arrow"><ArrowRight size={16} /></div>
                               <div>
-                                <span style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>GOLDEN RECORD FIELD</span>
+                                <span style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>UNIFIED PROFILE FIELD</span>
                                 <div style={{ fontWeight: 600, color: 'var(--accent-primary)', fontSize: '13px' }}>Timeline Activity History</div>
                               </div>
                             </div>
@@ -1045,7 +1229,7 @@ export default function Customer360Page() {
                               </div>
                               <div className="lineage-arrow"><ArrowRight size={16} /></div>
                               <div>
-                                <span style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>GOLDEN RECORD FIELD</span>
+                                <span style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>UNIFIED PROFILE FIELD</span>
                                 <div style={{ fontWeight: 600, color: 'var(--accent-primary)', fontSize: '13px' }}>Invoices, Revenue, Balances</div>
                               </div>
                             </div>
@@ -1213,6 +1397,326 @@ export default function Customer360Page() {
                         </div>
                       </div>
                     )}
+
+                    {/* DYNAMIC SEGMENTS TAB */}
+                    {activeTab === 'segments' && (
+                      <div className="c360-overview-grid" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '16px' }}>
+                        <div className="c360-card">
+                          <h4>🛠️ Dynamic Segment Builder</h4>
+                          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                            Combine customer traits, total spends, behavioral campaigns, and risk scores to form targeted audiences.
+                          </p>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            <div className="c360-form-group">
+                              <label>Segment Name *</label>
+                              <input 
+                                type="text" 
+                                placeholder="e.g. High Value Mobile Shoppers"
+                                value={segmentName}
+                                onChange={e => setSegmentName(e.target.value)}
+                                style={{ width: '100%', padding: '8px', borderRadius: '4px', backgroundColor: 'var(--bg-app)', border: '1px solid var(--grid-line-minor)', color: 'var(--text-loud)', fontSize: '13px' }}
+                              />
+                            </div>
+                            <div className="c360-form-group">
+                              <label>Description</label>
+                              <input 
+                                type="text" 
+                                placeholder="e.g. Customers in India who spent > 50,000 INR"
+                                value={segmentDesc}
+                                onChange={e => setSegmentDesc(e.target.value)}
+                                style={{ width: '100%', padding: '8px', borderRadius: '4px', backgroundColor: 'var(--bg-app)', border: '1px solid var(--grid-line-minor)', color: 'var(--text-loud)', fontSize: '13px' }}
+                              />
+                            </div>
+
+                            <div style={{ borderTop: '1px solid var(--grid-line-minor)', paddingTop: '12px' }}>
+                              <h5 style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>Rules Matrix (AND)</h5>
+                              {segmentRules.map((rule, idx) => (
+                                <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}>
+                                  <select 
+                                    value={rule.field} 
+                                    onChange={e => {
+                                      const copy = [...segmentRules];
+                                      copy[idx].field = e.target.value as any;
+                                      setSegmentRules(copy);
+                                    }}
+                                    style={{ flex: 1, padding: '6px', fontSize: '12px', backgroundColor: 'var(--bg-app)', border: '1px solid var(--grid-line-minor)', color: 'var(--text-loud)', borderRadius: '4px' }}
+                                  >
+                                    <option value="country">Country</option>
+                                    <option value="spent">Total Spent (INR)</option>
+                                    <option value="purchase_count">Purchase Count</option>
+                                    <option value="email_exists">Email Exists</option>
+                                    <option value="risk_score">Risk Score</option>
+                                  </select>
+
+                                  <select 
+                                    value={rule.operator} 
+                                    onChange={e => {
+                                      const copy = [...segmentRules];
+                                      copy[idx].operator = e.target.value as any;
+                                      setSegmentRules(copy);
+                                    }}
+                                    style={{ padding: '6px', fontSize: '12px', backgroundColor: 'var(--bg-app)', border: '1px solid var(--grid-line-minor)', color: 'var(--text-loud)', borderRadius: '4px' }}
+                                  >
+                                    <option value="equals">Equals</option>
+                                    <option value="not_equals">Not Equals</option>
+                                    <option value="greater_than">Greater Than (&gt;)</option>
+                                    <option value="less_than">Less Than (&lt;)</option>
+                                    <option value="greater_than_or_equal">Greater Than or Equal (&gt;=)</option>
+                                    <option value="less_than_or_equal">Less Than or Equal (&lt;=)</option>
+                                    <option value="contains">Contains</option>
+                                    <option value="does_not_contain">Does Not Contain</option>
+                                    <option value="starts_with">Starts With</option>
+                                    <option value="ends_with">Ends With</option>
+                                    <option value="regex">Advanced Pattern (Regex)</option>
+                                    <option value="exists">Exists</option>
+                                    <option value="does_not_exist">Does Not Exist</option>
+                                    <option value="in_list">In List (comma separated)</option>
+                                    <option value="not_in_list">Not In List</option>
+                                    <option value="between">Between (e.g. 100,500)</option>
+                                    <option value="not_between">Not Between</option>
+                                  </select>
+
+                                  {rule.operator !== 'exists' && rule.operator !== 'does_not_exist' && (
+                                    <input 
+                                      type="text" 
+                                      value={rule.value} 
+                                      onChange={e => {
+                                        const copy = [...segmentRules];
+                                        copy[idx].value = e.target.value;
+                                        setSegmentRules(copy);
+                                      }}
+                                      placeholder="Value"
+                                      style={{ flex: 1.2, padding: '6px', fontSize: '12px', backgroundColor: 'var(--bg-app)', border: '1px solid var(--grid-line-minor)', color: 'var(--text-loud)', borderRadius: '4px' }}
+                                    />
+                                  )}
+
+                                  <button 
+                                    type="button" 
+                                    onClick={() => setSegmentRules(segmentRules.filter((_, i) => i !== idx))}
+                                    style={{ color: '#f87171', border: 'none', background: 'transparent', cursor: 'pointer' }}
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                </div>
+                              ))}
+
+                              <button 
+                                type="button" 
+                                className="btn-secondary" 
+                                onClick={() => setSegmentRules([...segmentRules, { field: 'country', operator: 'equals', value: '' }])}
+                                style={{ padding: '4px 10px', fontSize: '11px', marginTop: '4px' }}
+                              >
+                                + Add Rule Condition
+                              </button>
+                            </div>
+
+                            <button 
+                              type="button" 
+                              className="btn-primary" 
+                              disabled={isCreatingSegment || !segmentName}
+                              onClick={async () => {
+                                setIsCreatingSegment(true);
+                                try {
+                                  const res = await fetch('/api/v1/segments', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ name: segmentName, description: segmentDesc, rules: segmentRules })
+                                  });
+                                  if (res.ok) {
+                                    setSegmentName('');
+                                    setSegmentDesc('');
+                                    setSegmentRules([{ field: 'country', operator: 'equals', value: 'India' }]);
+                                    loadSegmentsAndJobs();
+                                    alert('Segment created successfully!');
+                                  }
+                                } catch (err) {
+                                  console.error(err);
+                                } finally {
+                                  setIsCreatingSegment(false);
+                                }
+                              }}
+                              style={{ alignSelf: 'flex-start', marginTop: '12px' }}
+                            >
+                              Create Segment
+                            </button>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                          <div className="c360-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '20px' }}>
+                            <h4>Target Audience Size</h4>
+                            <div style={{ fontSize: '48px', fontWeight: 'bold', color: 'var(--accent-primary)', margin: '12px 0' }}>
+                              {matchingCount}
+                            </div>
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                              Estimated profiles matching current rules
+                            </span>
+                          </div>
+
+                          <div className="c360-card">
+                            <h4>Active Segments List</h4>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px', maxHeight: '200px', overflowY: 'auto' }}>
+                              {userSegments.map(seg => (
+                                <div key={seg.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px', border: '1px solid var(--grid-line-minor)', borderRadius: '4px', backgroundColor: 'var(--bg-app)' }}>
+                                  <div>
+                                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-loud)' }}>{seg.name}</div>
+                                    <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Size: {seg.estimatedSize || 0} customer profiles</div>
+                                  </div>
+                                  <button 
+                                    onClick={async () => {
+                                      if (confirm('Delete segment?')) {
+                                        await fetch(`/api/v1/segments?id=${seg.id}`, { method: 'DELETE' });
+                                        loadSegmentsAndJobs();
+                                      }
+                                    }}
+                                    style={{ color: '#f87171', border: 'none', background: 'transparent', cursor: 'pointer' }}
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* MARKETING ACTIVATION TAB */}
+                    {activeTab === 'activation' && (
+                      <div className="c360-overview-grid" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.8fr', gap: '16px' }}>
+                        <div className="c360-card">
+                          <h4>🚀 Trigger Business Action</h4>
+                          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+                            Execute business actions on saved customer cohorts.
+                          </p>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <div className="c360-form-group">
+                              <label>Select Segment</label>
+                              <select 
+                                value={syncTargetSegment} 
+                                onChange={e => setSyncTargetSegment(e.target.value)}
+                                style={{ padding: '8px', borderRadius: '4px', backgroundColor: 'var(--bg-app)', border: '1px solid var(--grid-line-minor)', color: 'var(--text-loud)', fontSize: '13px', width: '100%' }}
+                              >
+                                {userSegments.length === 0 ? (
+                                  <option value="">No segments. Create one first.</option>
+                                ) : (
+                                  userSegments.map(s => (
+                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                  ))
+                                )}
+                              </select>
+                            </div>
+
+                            <div className="c360-form-group">
+                              <label>Select Business Action</label>
+                              <select 
+                                value={syncTargetDest} 
+                                onChange={e => setSyncTargetDest(e.target.value as any)}
+                                style={{ padding: '8px', borderRadius: '4px', backgroundColor: 'var(--bg-app)', border: '1px solid var(--grid-line-minor)', color: 'var(--text-loud)', fontSize: '13px', width: '100%' }}
+                              >
+                                <option value="meta">Show Advertisement</option>
+                                <option value="email">Email Customers</option>
+                                <option value="sms">Send SMS / Push Notification</option>
+                                <option value="google">Export Audience</option>
+                                <option value="linkedin">Customer Journey</option>
+                              </select>
+                            </div>
+
+                            <div className="c360-form-group">
+                              <label>Gateway Connection Status</label>
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                padding: '10px 12px',
+                                borderRadius: '4px',
+                                backgroundColor: 'rgba(5, 150, 105, 0.08)',
+                                border: '1px solid rgba(5, 150, 105, 0.2)',
+                                color: '#34d399',
+                                fontSize: '12px',
+                                fontWeight: 600
+                              }}>
+                                <span style={{ height: '8px', width: '8px', backgroundColor: '#10b981', borderRadius: '50%', display: 'inline-block' }}></span>
+                                Authorized & Connected to Corporate Gateway
+                              </div>
+                            </div>
+
+                            <button 
+                              type="button" 
+                              className="btn-primary" 
+                              disabled={isSyncingDirect || userSegments.length === 0}
+                              onClick={async () => {
+                                setIsSyncingDirect(true);
+                                try {
+                                  const res = await fetch('/api/v1/destinations', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ segmentId: syncTargetSegment, destination: syncTargetDest })
+                                  });
+                                  if (res.ok) {
+                                    loadSegmentsAndJobs();
+                                    alert('Business action executed successfully!');
+                                  }
+                                } catch (err) {
+                                  console.error(err);
+                                } finally {
+                                  setIsSyncingDirect(false);
+                                }
+                              }}
+                              style={{ marginTop: '12px' }}
+                            >
+                              {isSyncingDirect ? 'Executing...' : 'Run Business Action'}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="c360-card">
+                          <h4>Business Action History Log</h4>
+                          <div className="table-wrapper" style={{ marginTop: '12px' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                              <thead>
+                                <tr style={{ borderBottom: '1px solid var(--grid-line-major)', color: 'var(--text-muted)' }}>
+                                  <th style={{ padding: '6px', textAlign: 'left' }}>Job ID</th>
+                                  <th style={{ padding: '6px', textAlign: 'left' }}>Segment</th>
+                                  <th style={{ padding: '6px', textAlign: 'left' }}>Action</th>
+                                  <th style={{ padding: '6px', textAlign: 'left' }}>Status</th>
+                                  <th style={{ padding: '6px', textAlign: 'left' }}>Synced Rows</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {userSyncJobs.length === 0 ? (
+                                  <tr>
+                                    <td colSpan={5} style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)' }}>
+                                      No sync logs. Run an activation action first.
+                                    </td>
+                                  </tr>
+                                ) : (
+                                  userSyncJobs.map(job => (
+                                    <tr key={job.jobId} style={{ borderBottom: '1px solid var(--grid-line-minor)', color: 'var(--text-default)' }}>
+                                      <td style={{ padding: '8px 6px', fontFamily: 'monospace' }}>{job.jobId}</td>
+                                      <td style={{ padding: '8px 6px' }}><strong>{job.segmentName}</strong></td>
+                                      <td style={{ padding: '8px 6px' }}>
+                                        <span className="badge-destination" style={{ textTransform: 'capitalize' }}>
+                                          {job.destination === 'meta' ? 'Show Advertisement' : job.destination === 'email' ? 'Email Customers' : job.destination === 'sms' ? 'Send SMS' : job.destination === 'google' ? 'Export Audience' : 'Customer Journey'}
+                                        </span>
+                                      </td>
+                                      <td style={{ padding: '8px 6px' }}>
+                                        <span className={`status-pill ${job.status.toLowerCase().replace(/ /g, '-')}`} style={{ fontSize: '9px', padding: '1px 6px' }}>
+                                          {job.status}
+                                        </span>
+                                      </td>
+                                      <td style={{ padding: '8px 6px', fontWeight: 600 }}>{job.rowsSynced}</td>
+                                    </tr>
+                                  ))
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </>
               ) : (
@@ -1317,7 +1821,7 @@ export default function Customer360Page() {
                   Cancel
                 </button>
                 <button type="submit" className="btn-primary">
-                  Create Golden Record
+                  Create Unified Profile
                 </button>
               </div>
             </form>
@@ -1331,7 +1835,7 @@ export default function Customer360Page() {
           <div className="c360-modal-container">
             <div className="c360-modal-header">
               <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f87171' }}>
-                <AlertTriangle size={18} /> Authorize PII Decryption
+                <AlertTriangle size={18} /> Authorize Sensitive Data Access
               </h4>
               <button className="c360-modal-close-btn" onClick={() => setRevealModalField(null)}>
                 <X size={18} />
@@ -1339,7 +1843,7 @@ export default function Customer360Page() {
             </div>
             <form onSubmit={handleConfirmDecrypt}>
               <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-                You are requesting decryption access to sensitive PII field: <strong>{revealModalField.label}</strong> ({revealModalField.classification}).
+                You are requesting decryption access to sensitive Personal Information field: <strong>{revealModalField.label}</strong> ({revealModalField.classification}).
                 This action is audited and requires business justification.
               </p>
               

@@ -131,9 +131,9 @@ export class JsonConnector implements ConnectorPlugin {
     const buffer = await this.getBuffer(filePath);
     const parsed = ParserFactory.parse(buffer, 'json');
 
-    const bronzeDir = path.resolve(process.cwd(), 'data', 'bronze');
-    fs.mkdirSync(bronzeDir, { recursive: true });
-    const bronzePath = path.join(bronzeDir, `${dataset.id.replace(/[^a-zA-Z0-9-_]/g, '_')}-${Date.now()}.ndjson`);
+    const rawDir = path.resolve(process.cwd(), 'data', 'raw');
+    fs.mkdirSync(rawDir, { recursive: true });
+    const rawPath = path.join(rawDir, `${dataset.id.replace(/[^a-zA-Z0-9-_]/g, '_')}-${Date.now()}.ndjson`);
     
     const records = parsed.rows.map(r => {
       const item: Record<string, any> = {};
@@ -144,12 +144,12 @@ export class JsonConnector implements ConnectorPlugin {
     });
 
     const lines = records.map(rec => JSON.stringify(rec)).join('\n') + '\n';
-    await fs.promises.writeFile(bronzePath, lines);
+    await fs.promises.writeFile(rawPath, lines);
 
     return {
       jobId: `json-${dataset.id}-${Date.now()}`,
       status: 'completed',
-      metadata: { bronzePath, rowCount: records.length },
+      metadata: { rawPath, bronzePath: rawPath, rowCount: records.length },
     };
   }
 

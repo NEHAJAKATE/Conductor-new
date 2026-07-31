@@ -47,7 +47,7 @@ export class IdentityResolutionService {
   resolveIdentity(
     record: Record<string, any>,
     existingLinks: Map<string, string> // maps lookupKeys (email, phone, govId, customerId) to goldenUuid
-  ): { goldenUuid: string; confidence: number; matches: string[] } {
+  ): { goldenUuid: string; unifiedUuid: string; confidence: number; matches: string[] } {
     const email = String(record.email || record.user_email || '').toLowerCase().trim();
     const phone = this.normalizePhone(String(record.phone || record.mobile || ''));
     const pan = String(record.pan || '').toUpperCase().trim();
@@ -97,7 +97,7 @@ export class IdentityResolutionService {
     if (!resolvedUuid) {
       // Use email, aadhaar, PAN, phone or customerId as canonical anchor to generate UUID
       const anchor = email || aadhaar || pan || passport || phone || customerId || name || `rand-${Math.random()}`;
-      resolvedUuid = UuidService.generateGoldenUuid(anchor);
+      resolvedUuid = UuidService.generateUnifiedUuid(anchor);
       confidence = 100; // Original profile seed
       matches.push('New Seed Identity');
     } else {
@@ -112,7 +112,7 @@ export class IdentityResolutionService {
     if (passport) existingLinks.set(`passport:${passport}`, resolvedUuid);
     if (customerId) existingLinks.set(`cust:${customerId}`, resolvedUuid);
 
-    return { goldenUuid: resolvedUuid, confidence, matches };
+    return { goldenUuid: resolvedUuid, unifiedUuid: resolvedUuid, confidence, matches };
   }
 }
 export const identityResolutionService = new IdentityResolutionService();

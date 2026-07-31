@@ -53,9 +53,10 @@ export default function SpiderbrainPage() {
         const res = await fetch('/api/v1/assets');
         if (res.ok) {
           const data = await res.json();
-          if (data.silverList && data.silverList.length > 0) {
+          const normalizedDataList = data.normalizedList || data.silverList;
+          if (normalizedDataList && normalizedDataList.length > 0) {
             // Generate a rule for each dynamic conformed staging dataset
-            const newRules: RuleCardItem[] = data.silverList.map((item: any) => ({
+            const newRules: RuleCardItem[] = normalizedDataList.map((item: any) => ({
               title: `${item.name.replace(/^stg_/, '').toUpperCase()} Verification Rule`,
               desc: `IF email IS NOT NULL AND phone REGEXP '^[0-9+]+$' THEN isValidEmailPhone = TRUE`,
               target: item.name,

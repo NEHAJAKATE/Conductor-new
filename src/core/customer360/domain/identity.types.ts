@@ -15,7 +15,8 @@ export interface LinkageReason {
 export interface IdentityLink {
   sourceId: string;
   sourceSystem: string; // CRM, CSV, Financial File, etc.
-  goldenUuid: string;
+  unifiedUuid: string;
+  goldenUuid?: string; // legacy alias
   linkedAt: string;
   confidenceScore: number;
   reason: LinkageReason;

@@ -29,6 +29,9 @@ export async function GET(request: NextRequest) {
       completionRate: p.identity.completionRate || 0,
       confidence: p.confidence,
       status: p.identity.status || 'Active',
+      profileType: p.identity.profileType || 'Known Customer',
+      cookieId: p.identity.cookieId || '',
+      location: p.identity.location || p.identity.country || 'Unknown'
     }));
 
     return NextResponse.json({ profiles: simplified }, { status: 200 });
@@ -40,27 +43,39 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, phone, pan, aadhaar, dob, address, segment } = await request.json();
+    const body = await request.json();
+    const { action, anonymousId, name, email, phone, pan, aadhaar, dob, address, segment } = body;
+
+    const context = bootstrap();
+
+    if (action === 'merge') {
+      if (!anonymousId || !email) {
+        return NextResponse.json({ message: 'anonymousId and email are required for merge' }, { status: 400 });
+      }
+      const merged = await context.customerRepository.mergeAnonymousVisitor(anonymousId, email, name || 'Known Customer');
+      if (!merged) {
+        return NextResponse.json({ message: 'Anonymous visitor not found' }, { status: 404 });
+      }
+      return NextResponse.json({ message: 'Visitor merged successfully', profile: merged }, { status: 200 });
+    }
 
     if (!name || !email) {
       return NextResponse.json({ message: 'Name and Email are required' }, { status: 400 });
     }
 
-    const context = bootstrap();
-
-    // Generate deterministic Golden UUID using email
+    // Generate deterministic Customer ID using email
     const canonicalString = `email:${email.toLowerCase().trim()}`;
-    const goldenUuid = uuidv5(canonicalString, config.identity.namespace);
+    const unifiedUuid = uuidv5(canonicalString, config.identity.namespace);
 
     // Check if profile already exists
-    const existing = await context.customerRepository.findByUuid(goldenUuid);
+    const existing = await context.customerRepository.findByUuid(unifiedUuid);
     if (existing) {
       return NextResponse.json({ message: 'Customer with this email already exists', profile: existing }, { status: 409 });
     }
 
     // Build profile structure
     const newProfile: any = {
-      uuid: goldenUuid,
+      uuid: unifiedUuid,
       identity: {
         name,
         email,

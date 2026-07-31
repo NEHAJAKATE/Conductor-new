@@ -2,6 +2,7 @@ import { GoldenCustomerProfile } from '../../core/customer360/domain/types';
 import { identityRepository, behaviorRepository, financialRepository } from './cdp-repositories';
 import { v5 as uuidv5 } from 'uuid';
 import { config } from '../../core/config';
+import { bootstrap } from '@/core/services/bootstrap';
 
 export class CustomerRepository {
   async save(profile: GoldenCustomerProfile): Promise<GoldenCustomerProfile> {
@@ -19,8 +20,19 @@ export class CustomerRepository {
       passport: idBlock.passport || 'Not Linked',
       segment: idBlock.segment || 'Regular',
       photoUrl: idBlock.photoUrl,
-      sourceSystem: 'Platform UI',
-      ingestedAt: new Date().toISOString()
+      sourceSystem: idBlock.sourceSystem || 'Platform UI',
+      ingestedAt: idBlock.ingestedAt || new Date().toISOString(),
+      profileType: idBlock.profileType,
+      cookieId: idBlock.cookieId,
+      sessionId: idBlock.sessionId,
+      browserFingerprint: idBlock.browserFingerprint,
+      deviceId: idBlock.deviceId,
+      referrer: idBlock.referrer,
+      utmSource: idBlock.utmSource,
+      browser: idBlock.browser,
+      location: idBlock.location,
+      device: idBlock.device,
+      country: idBlock.country
     });
 
     return profile;
@@ -52,6 +64,23 @@ export class CustomerRepository {
 
         if (exactIdMatch || exactEmailMatch || exactPhoneMatch || exactPanMatch || exactAadhaarMatch || exactPassportMatch || compositeMatch) {
           matchedUuid = p.uuid;
+          
+          const reasons: string[] = [];
+          if (exactIdMatch) reasons.push('Customer ID');
+          if (exactEmailMatch) reasons.push('Email Address');
+          if (exactPhoneMatch) reasons.push('Phone Number');
+          if (exactPanMatch) reasons.push('PAN Card');
+          if (exactAadhaarMatch) reasons.push('Aadhaar Card');
+          if (exactPassportMatch) reasons.push('Passport Number');
+          if (compositeMatch) reasons.push('Name & DOB');
+
+          p.matchReason = `Deterministic Match (${reasons.join(', ')})`;
+          p.evidence = p.evidence || [];
+          if (!p.evidence.includes(record.sourceSystem)) {
+            p.evidence.push(record.sourceSystem);
+          }
+          p.explainability = `Profile merged based on matching attributes: [${reasons.join(', ')}]. Contributing system: ${record.sourceSystem}.`;
+          
           break;
         }
       }
@@ -69,6 +98,18 @@ export class CustomerRepository {
         existingProfile.identity.aadhaar = (existingProfile.identity.aadhaar === 'Not Linked' ? record.aadhaar : existingProfile.identity.aadhaar) || record.aadhaar;
         existingProfile.identity.passport = (existingProfile.identity.passport === 'Not Linked' ? record.passport : existingProfile.identity.passport) || record.passport;
         
+        existingProfile.identity.profileType = existingProfile.identity.profileType || record.profileType;
+        existingProfile.identity.cookieId = existingProfile.identity.cookieId || record.cookieId;
+        existingProfile.identity.sessionId = existingProfile.identity.sessionId || record.sessionId;
+        existingProfile.identity.browserFingerprint = existingProfile.identity.browserFingerprint || record.browserFingerprint;
+        existingProfile.identity.deviceId = existingProfile.identity.deviceId || record.deviceId;
+        existingProfile.identity.referrer = existingProfile.identity.referrer || record.referrer;
+        existingProfile.identity.utmSource = existingProfile.identity.utmSource || record.utmSource;
+        existingProfile.identity.browser = existingProfile.identity.browser || record.browser;
+        existingProfile.identity.location = existingProfile.identity.location || record.location;
+        existingProfile.identity.device = existingProfile.identity.device || record.device;
+        existingProfile.identity.country = existingProfile.identity.country || record.country;
+
         if (!existingProfile.lineage.some(l => l.sourceSystem === record.sourceSystem && l.attributeName === 'name')) {
           existingProfile.lineage.push({
             attributeName: 'name',
@@ -95,7 +136,18 @@ export class CustomerRepository {
             segment: (record.segment === 'VIP' ? 'VIP' : 'Regular') as 'VIP' | 'Regular',
             riskScore: 10,
             completionRate: 75,
-            status: 'Active'
+            status: 'Active',
+            profileType: record.profileType || (record.email && !record.email.includes('anonymous') ? 'Known Customer' : 'Anonymous Visitor'),
+            cookieId: record.cookieId,
+            sessionId: record.sessionId,
+            browserFingerprint: record.browserFingerprint,
+            deviceId: record.deviceId,
+            referrer: record.referrer,
+            utmSource: record.utmSource,
+            browser: record.browser,
+            location: record.location,
+            device: record.device,
+            country: record.country
           },
           piiTags: [
             { fieldName: 'name', classification: 'NAME', masked: false },
@@ -127,7 +179,10 @@ export class CustomerRepository {
           ],
           confidence: 100,
           createdAt: record.ingestedAt,
-          updatedAt: record.ingestedAt
+          updatedAt: record.ingestedAt,
+          matchReason: 'Root Profile Registration',
+          evidence: [record.sourceSystem],
+          explainability: `Created unified profile root mapping using source: ${record.sourceSystem}.`
         };
         profilesMap.set(uuid, newProfile);
       }
@@ -256,9 +311,21 @@ export class CustomerRepository {
     let totalCompletion = 0;
     let piiDetectedCount = 0;
     let totalRevenue = 0;
+    
+    let knownCustomers = 0;
+    let anonymousVisitors = 0;
+    let activeVisitors = 0;
+    let returningVisitors = 0;
 
     list.forEach(p => {
-      if (p.confidence >= 80) resolvedProfiles += 1;
+      const type = p.identity.profileType || 'Known Customer';
+      if (type === 'Known Customer') knownCustomers++;
+      else if (type === 'Anonymous Visitor') anonymousVisitors++;
+      else resolvedProfiles++; // Unified Profile count
+
+      if (p.behavioralEvents.length > 2) activeVisitors++;
+      if (p.behavioralEvents.length > 0) returningVisitors++;
+
       totalConfidence += p.confidence;
       totalCompletion += p.identity.completionRate || 0;
       piiDetectedCount += p.piiTags.filter(t => t.classification !== 'NONE').length;
@@ -283,8 +350,76 @@ export class CustomerRepository {
       dataQuality: 98.4,
       profileCompletion: totalCustomers > 0 ? Math.round(totalCompletion / totalCustomers) : 0,
       revenue: totalRevenue,
-      dataSourcesCount: uniqueSources.size || 1
+      dataSourcesCount: uniqueSources.size || 1,
+      knownCustomers,
+      anonymousVisitors,
+      activeVisitors,
+      returningVisitors
     };
+  }
+
+  async mergeAnonymousVisitor(anonymousCustomerId: string, email: string, name: string): Promise<any> {
+    const list = await this.list();
+    
+    // Find anonymous profile
+    const anonymousProfile = list.find(p => p.identity.customerId === anonymousCustomerId || p.identity.cookieId === anonymousCustomerId || p.uuid === anonymousCustomerId);
+    
+    // Find or bootstrap known profile
+    const canonicalString = `email:${email.toLowerCase().trim()}`;
+    const unifiedUuid = uuidv5(canonicalString, config.identity.namespace);
+    let knownProfile = list.find(p => p.identity.email?.toLowerCase() === email.toLowerCase() || p.uuid === unifiedUuid);
+
+    if (anonymousProfile) {
+      if (knownProfile) {
+        // Merge history from anonymous to known
+        knownProfile.behavioralEvents = [...anonymousProfile.behavioralEvents, ...knownProfile.behavioralEvents];
+        knownProfile.identity.profileType = 'Unified Profile';
+        knownProfile.identity.cookieId = knownProfile.identity.cookieId || anonymousProfile.identity.cookieId;
+        knownProfile.identity.sessionId = knownProfile.identity.sessionId || anonymousProfile.identity.sessionId;
+        knownProfile.identity.browserFingerprint = knownProfile.identity.browserFingerprint || anonymousProfile.identity.browserFingerprint;
+        knownProfile.identity.deviceId = knownProfile.identity.deviceId || anonymousProfile.identity.deviceId;
+        knownProfile.identity.referrer = knownProfile.identity.referrer || anonymousProfile.identity.referrer;
+        knownProfile.identity.utmSource = knownProfile.identity.utmSource || anonymousProfile.identity.utmSource;
+        knownProfile.identity.browser = knownProfile.identity.browser || anonymousProfile.identity.browser;
+        knownProfile.identity.location = knownProfile.identity.location || anonymousProfile.identity.location;
+        knownProfile.identity.device = knownProfile.identity.device || anonymousProfile.identity.device;
+        knownProfile.identity.country = knownProfile.identity.country || anonymousProfile.identity.country;
+        
+        knownProfile.matchReason = `Stitched from Anonymous Cookie (${anonymousProfile.identity.cookieId || 'Session'})`;
+        knownProfile.explainability = `Stitched together based on visitor authentication of Cookie: ${anonymousProfile.identity.cookieId || 'N/A'}. History merged.`;
+
+        // Update known profile in the identities store
+        const records = await identityRepository.list();
+        const existingRec = records.find(r => r.customerId === knownProfile!.identity.customerId || r.email.toLowerCase() === email.toLowerCase());
+        if (existingRec) {
+          existingRec.profileType = 'Unified Profile';
+          existingRec.cookieId = knownProfile.identity.cookieId;
+          existingRec.browserFingerprint = knownProfile.identity.browserFingerprint;
+        }
+
+        // Delete anonymous visitor
+        await identityRepository.delete(anonymousProfile.identity.customerId || '');
+        return knownProfile;
+      } else {
+        // Promote anonymous visitor to known profile directly
+        anonymousProfile.identity.name = name;
+        anonymousProfile.identity.email = email;
+        anonymousProfile.identity.profileType = 'Unified Profile';
+        anonymousProfile.matchReason = 'Visitor Authentication Promotion';
+        anonymousProfile.explainability = `Visitor promoted to Unified Customer after signup/login. History preserved.`;
+
+        // Save back to identity repository
+        const records = await identityRepository.list();
+        const existingRec = records.find(r => r.customerId === anonymousProfile.identity.customerId);
+        if (existingRec) {
+          existingRec.name = name;
+          existingRec.email = email;
+          existingRec.profileType = 'Unified Profile';
+        }
+        return anonymousProfile;
+      }
+    }
+    return null;
   }
 }
 

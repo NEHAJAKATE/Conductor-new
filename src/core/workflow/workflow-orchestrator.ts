@@ -122,11 +122,13 @@ export class WorkflowService {
       'register_dataset',
       'metadata_catalog',
       'run_ingestion',
-      'bronze_storage',
+      'raw_storage',
+      'bronze_storage', // legacy
       'transformation',
       'identity_resolution',
       'deduplication',
-      'silver_storage',
+      'normalized_storage',
+      'silver_storage', // legacy
       'parquet_export',
       'statistics',
     ];
@@ -367,24 +369,27 @@ export class WorkflowService {
         const childResults: any[] = [];
         for (const fileDataset of datasets) {
           const startTime = Date.now();
-          this.logStage(workflow, 'bronze_storage', `Ingesting sub-file: ${fileDataset.displayName}`);
+          this.logStage(workflow, 'raw_storage', `Ingesting sub-file: ${fileDataset.displayName}`);
+          if (workflow.stages['bronze_storage']) {
+            this.logStage(workflow, 'bronze_storage', `Ingesting sub-file: ${fileDataset.displayName}`);
+          }
           
           const ingestResult = await this.lifecycleService.ingestDataset(connection, fileDataset, { mode: 'full' });
-          const bronzePath = ingestResult.metadata?.bronzePath;
+          const rawPath = ingestResult.metadata?.rawPath || ingestResult.metadata?.bronzePath;
           const rawCount = ingestResult.metadata?.rowCount || 0;
           
-          const rawRecordsText = await fs.promises.readFile(bronzePath, 'utf8');
+          const rawRecordsText = await fs.promises.readFile(rawPath, 'utf8');
           const records = rawRecordsText.trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
           const cleanRecords = await this.transformationService.transform(records, fileDataset.schema || workflow.previewData.schema);
           
           const resolution = await this.identityService.resolve(cleanRecords);
           const dedup = await this.deduplicationService.deduplicate(resolution.profiles);
           
-          const silverDir = path.resolve(process.cwd(), 'data', 'silver');
-          fs.mkdirSync(silverDir, { recursive: true });
+          const normalizedDir = path.resolve(process.cwd(), 'data', 'normalized');
+          fs.mkdirSync(normalizedDir, { recursive: true });
           const normalizedName = fileDataset.displayName.replace(/[^a-zA-Z0-9-_]/g, '_');
-          const silverPath = path.join(silverDir, `${normalizedName}-${Date.now()}.json`);
-          await fs.promises.writeFile(silverPath, JSON.stringify(dedup.deduplicatedRecords, null, 2));
+          const normalizedPath = path.join(normalizedDir, `${normalizedName}-${Date.now()}.json`);
+          await fs.promises.writeFile(normalizedPath, JSON.stringify(dedup.deduplicatedRecords, null, 2));
           
           const format = connection.config.outputFormat || 'parquet';
           const exportPath = await this.exportData(dedup.deduplicatedRecords, fileDataset.schema || workflow.previewData.schema, normalizedName, format);
@@ -395,7 +400,8 @@ export class WorkflowService {
             validCount: cleanRecords.length,
             duplicatesPruned: dedup.duplicatesCount,
             profilesCount: resolution.profiles.length,
-            silverPath,
+            normalizedPath,
+            silverPath: normalizedPath, // legacy
             exportPath,
             format,
             durationMs: Date.now() - startTime,
@@ -430,18 +436,21 @@ export class WorkflowService {
         await this.statisticsService.recordMetrics(workflow.id, combinedMetrics);
         workflow.stages['statistics'].data = {
           ...combinedMetrics,
-          silverPath: 'data/silver/',
+          normalizedPath: 'data/normalized/',
+          silverPath: 'data/normalized/', // legacy
           parquetPath: 'data/parquet/',
           schemaPath: 'data/parquet/',
           childResults,
         };
         
         workflow.status = 'completed';
-        workflow.stages['bronze_storage'].status = 'completed';
+        if (workflow.stages['raw_storage']) workflow.stages['raw_storage'].status = 'completed';
+        if (workflow.stages['bronze_storage']) workflow.stages['bronze_storage'].status = 'completed';
         workflow.stages['transformation'].status = 'completed';
         workflow.stages['identity_resolution'].status = 'completed';
         workflow.stages['deduplication'].status = 'completed';
-        workflow.stages['silver_storage'].status = 'completed';
+        if (workflow.stages['normalized_storage']) workflow.stages['normalized_storage'].status = 'completed';
+        if (workflow.stages['silver_storage']) workflow.stages['silver_storage'].status = 'completed';
         workflow.stages['parquet_export'].status = 'completed';
         workflow.stages['statistics'].status = 'completed';
         workflow.stages['statistics'].updatedAt = new Date();
@@ -480,17 +489,29 @@ export class WorkflowService {
       workflow.stages['run_ingestion'].updatedAt = new Date();
       this.logStage(workflow, 'run_ingestion', `Ingestion job enqueued. Job ID: ${job.id}`, 'success', 'ingestion');
 
-      workflow.currentStage = 'bronze_storage';
-      workflow.stages['bronze_storage'].status = 'running';
-      workflow.stages['bronze_storage'].updatedAt = new Date();
-      this.logStage(workflow, 'bronze_storage', 'Starting Stage 12: Bronze Storage Ingestion');
+      workflow.currentStage = 'raw_storage';
+      if (workflow.stages['raw_storage']) {
+        workflow.stages['raw_storage'].status = 'running';
+        workflow.stages['raw_storage'].updatedAt = new Date();
+      }
+      if (workflow.stages['bronze_storage']) {
+        workflow.stages['bronze_storage'].status = 'running';
+        workflow.stages['bronze_storage'].updatedAt = new Date();
+      }
+      this.logStage(workflow, 'raw_storage', 'Starting Stage 12: Raw Storage Ingestion');
+      if (workflow.stages['bronze_storage']) {
+        this.logStage(workflow, 'bronze_storage', 'Starting Stage 12: Bronze Storage Ingestion');
+      }
       await this.workflowRepository.save(workflow);
 
-      this.logStage(workflow, 'bronze_storage', 'Worker processing started...', 'info', 'worker');
+      this.logStage(workflow, 'raw_storage', 'Worker processing started...', 'info', 'worker');
+      if (workflow.stages['bronze_storage']) {
+        this.logStage(workflow, 'bronze_storage', 'Worker processing started...', 'info', 'worker');
+      }
       let jobStatus = job.status;
       let attempts = 0;
       let lastLoggedStatus = '';
-      let bronzePath = '';
+      let rawPath = '';
       let rawRecordsCount = 0;
 
       while (attempts < 60) {
@@ -501,17 +522,27 @@ export class WorkflowService {
 
         jobStatus = updatedJob.status;
         if (jobStatus !== lastLoggedStatus) {
-          this.logStage(workflow, 'bronze_storage', `Worker task status: ${jobStatus}`, 'info', 'worker');
+          this.logStage(workflow, 'raw_storage', `Worker task status: ${jobStatus}`, 'info', 'worker');
+          if (workflow.stages['bronze_storage']) {
+            this.logStage(workflow, 'bronze_storage', `Worker task status: ${jobStatus}`, 'info', 'worker');
+          }
           lastLoggedStatus = jobStatus;
           await this.workflowRepository.save(workflow);
         }
 
         if (jobStatus === 'completed') {
-          bronzePath = updatedJob.metrics?.bronzePath;
+          rawPath = updatedJob.metrics?.rawPath || updatedJob.metrics?.bronzePath;
           rawRecordsCount = updatedJob.metrics?.rowCount || 0;
-          workflow.stages['bronze_storage'].status = 'completed';
-          workflow.stages['bronze_storage'].updatedAt = new Date();
-          workflow.stages['bronze_storage'].data = updatedJob.metrics;
+          if (workflow.stages['raw_storage']) {
+            workflow.stages['raw_storage'].status = 'completed';
+            workflow.stages['raw_storage'].updatedAt = new Date();
+            workflow.stages['raw_storage'].data = updatedJob.metrics;
+          }
+          if (workflow.stages['bronze_storage']) {
+            workflow.stages['bronze_storage'].status = 'completed';
+            workflow.stages['bronze_storage'].updatedAt = new Date();
+            workflow.stages['bronze_storage'].data = updatedJob.metrics;
+          }
           break;
         }
 
@@ -534,7 +565,7 @@ export class WorkflowService {
       this.logStage(workflow, 'transformation', 'Starting Stage 13: Data Transformation Engine');
       await this.workflowRepository.save(workflow);
 
-      const rawRecordsText = await fs.promises.readFile(bronzePath, 'utf8');
+      const rawRecordsText = await fs.promises.readFile(rawPath, 'utf8');
       const records = rawRecordsText.trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
       const transformedRecords = await this.transformationService.transform(records, workflow.previewData.schema);
       const transDuration = Date.now() - transStart;
@@ -574,23 +605,41 @@ export class WorkflowService {
       this.logStage(workflow, 'deduplication', `Deduplication merge complete. Duplicates pruned: ${deduplicationResult.duplicatesCount}.`, 'success');
       await this.workflowRepository.save(workflow);
 
-      const silverStart = Date.now();
-      workflow.currentStage = 'silver_storage';
-      workflow.stages['silver_storage'].status = 'running';
-      workflow.stages['silver_storage'].updatedAt = new Date();
-      this.logStage(workflow, 'silver_storage', 'Starting Stage 16: Writing to Silver Storage');
+      const normalizedStart = Date.now();
+      workflow.currentStage = 'normalized_storage';
+      if (workflow.stages['normalized_storage']) {
+        workflow.stages['normalized_storage'].status = 'running';
+        workflow.stages['normalized_storage'].updatedAt = new Date();
+      }
+      if (workflow.stages['silver_storage']) {
+        workflow.stages['silver_storage'].status = 'running';
+        workflow.stages['silver_storage'].updatedAt = new Date();
+      }
+      this.logStage(workflow, 'normalized_storage', 'Starting Stage 16: Writing to Normalized Storage');
+      if (workflow.stages['silver_storage']) {
+        this.logStage(workflow, 'silver_storage', 'Starting Stage 16: Writing to Silver Storage');
+      }
       await this.workflowRepository.save(workflow);
 
-      const silverDir = path.resolve(process.cwd(), 'data', 'silver');
-      await fs.promises.mkdir(silverDir, { recursive: true });
+      const normalizedDir = path.resolve(process.cwd(), 'data', 'normalized');
+      await fs.promises.mkdir(normalizedDir, { recursive: true });
       const normalizedDatasetId = workflow.datasetId.replace(/[^a-zA-Z0-9-_]/g, '_');
-      const silverPath = path.join(silverDir, `${normalizedDatasetId}-${Date.now()}.json`);
-      await fs.promises.writeFile(silverPath, JSON.stringify(deduplicationResult.deduplicatedRecords, null, 2));
-      const silverDuration = Date.now() - silverStart;
+      const normalizedPath = path.join(normalizedDir, `${normalizedDatasetId}-${Date.now()}.json`);
+      await fs.promises.writeFile(normalizedPath, JSON.stringify(deduplicationResult.deduplicatedRecords, null, 2));
+      const normalizedDuration = Date.now() - normalizedStart;
 
-      workflow.stages['silver_storage'].status = 'completed';
-      workflow.stages['silver_storage'].updatedAt = new Date();
-      this.logStage(workflow, 'silver_storage', `Silver layer created. Path: ${silverPath}`, 'success');
+      if (workflow.stages['normalized_storage']) {
+        workflow.stages['normalized_storage'].status = 'completed';
+        workflow.stages['normalized_storage'].updatedAt = new Date();
+      }
+      if (workflow.stages['silver_storage']) {
+        workflow.stages['silver_storage'].status = 'completed';
+        workflow.stages['silver_storage'].updatedAt = new Date();
+      }
+      this.logStage(workflow, 'normalized_storage', `Normalized layer created. Path: ${normalizedPath}`, 'success');
+      if (workflow.stages['silver_storage']) {
+        this.logStage(workflow, 'silver_storage', `Silver layer created. Path: ${normalizedPath}`, 'success');
+      }
       await this.workflowRepository.save(workflow);
 
       const parquetStart = Date.now();
@@ -642,7 +691,8 @@ export class WorkflowService {
       workflow.stages['statistics'].updatedAt = new Date();
       workflow.stages['statistics'].data = {
         ...pipelineMetrics,
-        silverPath,
+        normalizedPath,
+        silverPath: normalizedPath, // legacy compatibility
         parquetPath: exportPath,
         schemaPath: exportPath + '.schema',
         unifiedRecords: deduplicationResult.deduplicatedRecords,

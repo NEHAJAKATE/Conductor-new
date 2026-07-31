@@ -18,7 +18,7 @@ export class ParquetService {
   }
 
   async export(records: Array<Record<string, any>>, schema: any, datasetId: string): Promise<ParquetExportResult> {
-    console.log(`[ParquetService] Converting ${records.length} Silver rows into columnar Parquet structure...`);
+    console.log(`[ParquetService] Converting ${records.length} Normalized rows into columnar Parquet structure...`);
     const normalized = datasetId.replace(/[^a-zA-Z0-9-_]/g, '_');
     const baseFileName = `${normalized}-${Date.now()}`;
     const parquetFilePath = path.join(this.basePath, `${baseFileName}.parquet`);

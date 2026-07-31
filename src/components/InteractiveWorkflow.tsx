@@ -33,15 +33,15 @@ const initialNodes = [
   { id: 'src-s3', type: 'hexNode', position: { x: 50, y: 490 }, data: { title: 'Cloud Storage (S3)', desc: 'SFTP / Batch', icon: 'Cloud' } },
 
   // Pre-Ingestion
-  { id: 'pre-ingest', type: 'hexNode', position: { x: 380, y: 270 }, data: { title: 'Pre-Ingestion', desc: 'PII Masking & Event Norm', icon: 'Filter', metric: '100% compliant', metricClass: 'success-metric' } },
+  { id: 'pre-ingest', type: 'hexNode', position: { x: 380, y: 270 }, data: { title: 'Pre-Ingestion', desc: 'Sensitive Data Masking & Event Norm', icon: 'Filter', metric: '100% compliant', metricClass: 'success-metric' } },
 
   // Data Contexthouse (Group)
-  { id: 'group-contexthouse', type: 'groupNode', position: { x: 720, y: 50 }, data: { label: 'Data Contexthouse (Lakehouse)', width: 660, height: 440 }, style: { zIndex: -1 } },
-  { id: 'lake-bronze', type: 'hexNode', parentNode: 'group-contexthouse', position: { x: 40, y: 60 }, data: { title: 'Bronze Layer', desc: 'Raw Immutable Events', icon: 'HardDrive' } },
-  { id: 'lake-silver', type: 'hexNode', parentNode: 'group-contexthouse', position: { x: 40, y: 190 }, data: { title: 'Silver Layer', desc: 'Normalized schema', icon: 'Layers' } },
-  { id: 'id-graph', type: 'hexNode', parentNode: 'group-contexthouse', position: { x: 40, y: 320 }, data: { title: 'Identity Graph', desc: 'Deterministic stitching', icon: 'Workflow' } },
+  { id: 'group-contexthouse', type: 'groupNode', position: { x: 720, y: 50 }, data: { label: 'Data Contexthouse', width: 660, height: 440 }, style: { zIndex: -1 } },
+  { id: 'lake-raw', type: 'hexNode', parentNode: 'group-contexthouse', position: { x: 40, y: 60 }, data: { title: 'Raw Imported Data', desc: 'Original files exactly as uploaded', icon: 'HardDrive' } },
+  { id: 'lake-normalized', type: 'hexNode', parentNode: 'group-contexthouse', position: { x: 40, y: 190 }, data: { title: 'Clean & Standardized Data', desc: 'Duplicate records removed, formats standardized', icon: 'Layers' } },
+  { id: 'id-graph', type: 'hexNode', parentNode: 'group-contexthouse', position: { x: 40, y: 320 }, data: { title: 'Customer Matching Graph', desc: 'Deterministic stitching', icon: 'Workflow' } },
   
-  { id: 'lake-gold', type: 'hexNode', parentNode: 'group-contexthouse', position: { x: 360, y: 60 }, data: { title: 'Gold Marts', desc: 'Activation ready', icon: 'Star' } },
+  { id: 'lake-ready', type: 'hexNode', parentNode: 'group-contexthouse', position: { x: 360, y: 60 }, data: { title: 'Business Ready Data', desc: 'Final datasets ready for AI, analytics and reporting', icon: 'Star' } },
   { id: 'known-profiles', type: 'hexNode', parentNode: 'group-contexthouse', position: { x: 360, y: 190 }, data: { title: 'Known Profiles', desc: 'Identity-stitched', icon: 'Users', metric: '45M Profiles' } },
   { id: 'anon-profiles', type: 'hexNode', parentNode: 'group-contexthouse', position: { x: 360, y: 320 }, data: { title: 'Anonymous Profiles', desc: 'TTL gated', icon: 'Ghost', metric: '112M Profiles' } },
 
@@ -87,17 +87,17 @@ const initialEdges = [
   { id: 'e5', source: 'src-s3', target: 'pre-ingest', ...primaryEdge },
 
   // Pre-Ingest -> Lake
-  { id: 'e6', source: 'pre-ingest', target: 'lake-bronze', ...primaryEdge },
+  { id: 'e6', source: 'pre-ingest', target: 'lake-raw', ...primaryEdge },
   
   // Lake internal
-  { id: 'e7', source: 'lake-bronze', target: 'lake-silver', ...primaryEdge },
-  { id: 'e8', source: 'lake-silver', target: 'id-graph', ...primaryEdge },
-  { id: 'e9', source: 'lake-silver', target: 'lake-gold', ...primaryEdge },
+  { id: 'e7', source: 'lake-raw', target: 'lake-normalized', ...primaryEdge },
+  { id: 'e8', source: 'lake-normalized', target: 'id-graph', ...primaryEdge },
+  { id: 'e9', source: 'lake-normalized', target: 'lake-ready', ...primaryEdge },
   { id: 'e10', source: 'id-graph', target: 'known-profiles', ...primaryEdge },
   { id: 'e11', source: 'id-graph', target: 'anon-profiles', ...primaryEdge },
 
   // Lake -> Spiderbrain
-  { id: 'e12', source: 'lake-gold', target: 'sb-tab-parser', ...secondaryEdge },
+  { id: 'e12', source: 'lake-ready', target: 'sb-tab-parser', ...secondaryEdge },
   { id: 'e13', source: 'known-profiles', target: 'sb-tab-parser', ...secondaryEdge },
 
   // Spiderbrain internal

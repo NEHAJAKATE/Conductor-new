@@ -11,7 +11,7 @@ export async function GET(
   try {
     const context = bootstrap();
     const searchParams = request.nextUrl.searchParams;
-    const role = (searchParams.get('role') || 'Analyst') as 'Analyst' | 'Manager' | 'Admin' | 'Owner';
+    const role = (searchParams.get('role') || 'Analyst') as 'Admin' | 'Owner' | 'Compliance Officer' | 'Marketing' | 'Analyst' | 'Developer' | 'AI Agent';
 
     const profile = await context.customerRepository.findByUuid(uuid);
     if (!profile) {
@@ -34,11 +34,13 @@ export async function GET(
       }
     });
 
-    // Audit Log masking event if requested by non-Admin/Owner
-    if (role !== 'Admin' && role !== 'Owner') {
-      console.log(`[Privacy Center] Audit: Role '${role}' accessed masked profile for Golden UUID ${uuid}`);
+    const isPrivileged = role === 'Admin' || role === 'Owner' || role === 'Compliance Officer' || role === 'Developer';
+
+    // Audit Log masking event
+    if (!isPrivileged) {
+      console.log(`[Privacy Center] Audit: Role '${role}' accessed masked profile for Customer ID ${uuid}`);
     } else {
-      console.log(`[Privacy Center] Audit WARNING: ${role} role accessed RAW unmasked profile for Golden UUID ${uuid}`);
+      console.log(`[Privacy Center] Audit WARNING: ${role} role accessed RAW unmasked profile for Customer ID ${uuid}`);
     }
 
     return NextResponse.json(cloned, { status: 200 });

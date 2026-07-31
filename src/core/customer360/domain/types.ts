@@ -16,6 +16,19 @@ export interface IdentityBlock {
   completionRate?: number; // 0-100
   status?: 'Active' | 'Pending' | 'Merged';
   gender?: string;
+  country?: string;
+  profileType?: 'Anonymous Visitor' | 'Known Customer' | 'Unified Profile';
+  cookieId?: string;
+  sessionId?: string;
+  browserFingerprint?: string;
+  deviceId?: string;
+  referrer?: string;
+  utmSource?: string;
+  browser?: string;
+  location?: string;
+  device?: string;
+  sourceSystem?: string;
+  ingestedAt?: string;
 }
 
 export interface PiiTag {
@@ -31,6 +44,11 @@ export interface BehavioralEvent {
   source: string;
   details: string;
   amount?: number;
+  campaign?: string;
+  device?: string;
+  browser?: string;
+  geo?: string;
+  referral?: string;
 }
 
 export interface FinancialAccount {
@@ -81,7 +99,7 @@ export interface SourceLineageBlock {
   originalValue: string;
 }
 
-export interface GoldenCustomerProfile {
+export interface UnifiedCustomerProfile {
   uuid: string;
   identity: IdentityBlock;
   piiTags: PiiTag[];
@@ -91,4 +109,9 @@ export interface GoldenCustomerProfile {
   confidence: number; // 0-100
   createdAt: string;
   updatedAt: string;
+  matchReason?: string;
+  evidence?: string[];
+  explainability?: string;
 }
+
+export type GoldenCustomerProfile = UnifiedCustomerProfile;
