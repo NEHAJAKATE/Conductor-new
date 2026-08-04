@@ -71,29 +71,47 @@ interface WorkflowEntity {
 }
 
 const CONNECTORS = [
-  { id: 'csv', name: 'CSV File', status: 'Active', description: 'Ingest local or network CSV datasets.' },
-  { id: 'excel', name: 'Excel Spreadsheets', status: 'Active', description: 'Import workbook sheets (.xlsx, .xls).' },
-  { id: 'json', name: 'JSON Docs', status: 'Active', description: 'Stream semi-structured document lists.' },
-  { id: 'parquet', name: 'Apache Parquet', status: 'Active', description: 'High performance columnar datasets.' },
-  { id: 'folder', name: 'Folder Upload', status: 'Active', description: 'Bulk ingest multi-file directory folders.' },
-  { id: 's3', name: 'Amazon S3 Bucket', status: 'Coming Soon', description: 'Pull datasets directly from AWS S3.' },
-  { id: 'azure', name: 'Azure Blob', status: 'Coming Soon', description: 'Ingest from Microsoft Cloud storage.' },
-  { id: 'gcs', name: 'Google Cloud Storage', status: 'Coming Soon', description: 'Ingest from Google Cloud Storage.' },
-  { id: 'kafka', name: 'Apache Kafka', status: 'Coming Soon', description: 'Connect real-time event streams.' },
-  { id: 'postgres', name: 'PostgreSQL', status: 'Coming Soon', description: 'Direct database ingestion.' },
-  { id: 'salesforce', name: 'Salesforce CRM', status: 'Coming Soon', description: 'Sync sales and accounts data.' },
-  { id: 'hubspot', name: 'HubSpot', status: 'Coming Soon', description: 'Sync lead and contacts directory.' },
+  { id: 'csv', name: 'CSV Files', status: 'Active', description: 'Ingest local or network comma-separated datasets.' },
+  { id: 'excel', name: 'Excel Workbook', status: 'Active', description: 'Import spreadsheets (.xlsx, .xls) sheets.' },
+  { id: 'json', name: 'JSON Records', status: 'Active', description: 'Stream raw semi-structured document lists.' },
+  { id: 'parquet', name: 'Apache Parquet', status: 'Active', description: 'High performance compressed columnar formats.' },
+  { id: 'folder', name: 'Directory Ingest', status: 'Active', description: 'Bulk ingest multi-file local/network folders.' },
+  { id: 's3', name: 'Amazon S3', status: 'Active', description: 'Pull cohorts from AWS S3 storage buckets.' },
+  { id: 'r2', name: 'Cloudflare R2', status: 'Active', description: 'Stream objects from Cloudflare global cache.' },
+  { id: 'azure', name: 'Azure Blob', status: 'Active', description: 'Ingest files from Microsoft Azure containers.' },
+  { id: 'gcs', name: 'Google Cloud Storage', status: 'Active', description: 'Import datasets from Google Cloud Storage.' },
+  { id: 'sftp', name: 'SFTP Gateway', status: 'Active', description: 'Secure FTP file sync on cron schedules.' },
+  { id: 'rest_api', name: 'REST API Pull', status: 'Active', description: 'Pull datasets via GET/POST HTTP endpoints.' },
+  { id: 'webhook', name: 'Webhooks', status: 'Active', description: 'Real-time event streams listener.' },
+  { id: 'postgres', name: 'PostgreSQL DB', status: 'Active', description: 'Sync tables using logical replication.' },
+  { id: 'mysql', name: 'MySQL DB', status: 'Active', description: 'Read database tables dynamically.' },
+  { id: 'mongodb', name: 'MongoDB', status: 'Active', description: 'Ingest documents from collection snapshots.' },
+  { id: 'bigquery', name: 'Google BigQuery', status: 'Active', description: 'Query and pull from enterprise warehouses.' },
+  { id: 'snowflake', name: 'Snowflake', status: 'Active', description: 'Sync customer tables from Snowflake Cortex.' },
+  { id: 'salesforce', name: 'Salesforce CDP', status: 'Active', description: 'Import customer graphs from SF Data Cloud.' },
+  { id: 'hubspot', name: 'HubSpot Contacts', status: 'Active', description: 'Pull marketing list CRM directory contacts.' },
+  { id: 'shopify', name: 'Shopify Store', status: 'Active', description: 'Sync store orders, checkouts, and customer lists.' },
+  { id: 'stripe', name: 'Stripe Billing', status: 'Active', description: 'Sync invoices, customer balances, and plans.' },
+  { id: 'razorpay', name: 'Razorpay Gateway', status: 'Active', description: 'Sync payments, refunds, and subscriptions.' },
+  { id: 'meta_ads', name: 'Meta Ads', status: 'Active', description: 'Import campaign analytics, CTR, and CPC metrics.' },
+  { id: 'google_ads', name: 'Google Ads', status: 'Active', description: 'Target custom lists using Customer Match.' },
+  { id: 'ga4', name: 'Google Analytics 4', status: 'Active', description: 'Pull pageviews, sessions, and website goals.' },
+  { id: 'mixpanel', name: 'Mixpanel', status: 'Active', description: 'Import custom event cohorts and searches.' },
+  { id: 'amplitude', name: 'Amplitude', status: 'Active', description: 'Sync behavioral logs and clickstream maps.' },
+  { id: 'gmail', name: 'Gmail Connector', status: 'Active', description: 'Sync conversation logs via IMAP/OAuth.' },
+  { id: 'outlook', name: 'Outlook Workspace', status: 'Active', description: 'Pull calendar meets and inbox events.' },
+  { id: 'mcp_github', name: 'GitHub MCP Server', status: 'Active', description: 'Ingest direct issues/repo code files dynamically.' }
 ];
 
 const HELP_CONCEPTS = [
-  { term: 'Bronze Layer', definition: 'The raw ingestion layer in the lakehouse. Data is stored in its original format (NDJSON) as an immutable audit history.' },
-  { term: 'Silver Layer', definition: 'The cleaned, transformed, and deduplicated layer. Sourced from Bronze, columns are normalized and duplicate rows resolved.' },
-  { term: 'Gold Layer', definition: 'The business aggregate layer. Aggregates and clean dimension tables optimized for BI queries and analytical reporting.' },
+  { term: 'Raw Imported Data', definition: 'Original uploaded data format (NDJSON) stored as an immutable audit history.' },
+  { term: 'Clean & Standardized Data', definition: 'Duplicate records removed, formats standardized. Columns are normalized and duplicate rows resolved.' },
+  { term: 'Business Ready Data', definition: 'Final datasets ready for AI, analytics, and reporting.' },
   { term: 'Deduplication', definition: 'The process of identifying duplicate records and merging them based on attributes, timestamp recency, and field density.' },
-  { term: 'Identity Resolution', definition: 'The linking of multiple records to build a Customer 360 profile, utilizing identifiers like emails and phone numbers.' },
+  { term: 'Customer Matching', definition: 'The linking of multiple records to build a Customer Profile, utilizing identifiers like emails and phone numbers.' },
   { term: 'Apache Parquet', definition: 'A high-performance columnar storage format. Compresses data efficiently and speeds up analytic query execution.' },
   { term: 'Delta Lake', definition: 'An open-source storage framework that brings ACID transactions and history versioning logs to object store pools.' },
-  { term: 'PII Identification', definition: 'Automatic detection of Personally Identifiable Information (emails, phones, addresses) to enforce access policies.' },
+  { term: 'Sensitive Data Detection', definition: 'Automatic detection of Sensitive Personal Information (emails, phones, addresses) to enforce access policies.' },
 ];
 
 const getStageExplanation = (stage?: string, fileName?: string) => {
@@ -114,23 +132,25 @@ const getStageExplanation = (stage?: string, fileName?: string) => {
     case 'schema_detection':
       return `Infers data types (string, integer, number, boolean, timestamp) for headers.`;
     case 'validation':
-      return `Validates required fields, checks for duplicate rows, missing cells, and PII keys.`;
+      return `Validates required fields, checks for duplicate rows, missing cells, and sensitive keys.`;
     case 'register_dataset':
       return `Registers logical schema definition targets.`;
     case 'metadata_catalog':
       return `Logs details (file size, delimiters, encoding) in the central metadata catalog.`;
     case 'run_ingestion':
       return `Enqueues ingestion job task inside background worker queues.`;
+    case 'raw_storage':
     case 'bronze_storage':
-      return `Streams source data row-by-row into NDJSON file formats in the Bronze layer.`;
+      return `Streams source data row-by-row into NDJSON file formats in the Raw Imported Data layer.`;
     case 'transformation':
       return `Normalizes strings, normalizes phone/email formatting, and converts datatypes.`;
     case 'identity_resolution':
       return `Clusters records using contact keys to create unified profile graphs.`;
     case 'deduplication':
       return `Prunes redundant rows, keeping latest timestamps and dense non-null profiles.`;
+    case 'normalized_storage':
     case 'silver_storage':
-      return `Writes the cleaned, unified records to the Silver directory.`;
+      return `Writes the cleaned, unified records to the Clean & Standardized Data directory.`;
     case 'parquet_export':
       return `Columnarizes records and compiles target Parquet, Delta Lake, or Iceberg blocks.`;
     case 'statistics':
@@ -150,6 +170,7 @@ export default function IngestionPage() {
   const [secretKey, setSecretKey] = useState('');
   const [pathPrefix, setPathPrefix] = useState('');
   const [outputFormat, setOutputFormat] = useState('parquet');
+  const [mockRowCount, setMockRowCount] = useState<number>(100);
 
   const [file, setFile] = useState<File | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -157,7 +178,7 @@ export default function IngestionPage() {
   const [uploadedPath, setUploadedPath] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  const [folderFiles, setFolderFiles] = useState<Array<{ name: string; size: number; checked: boolean; type: string }>>([]);
+  const [folderFiles, setFolderFiles] = useState<Array<{ name: string; size: number; checked: boolean; type: string; fileObject?: File }>>([]);
   const [activeFileIndex, setActiveFileIndex] = useState<number>(0);
 
   const [gridSearch, setGridSearch] = useState('');
@@ -186,7 +207,11 @@ export default function IngestionPage() {
     const pollWorkflowStatus = async () => {
       try {
         const response = await fetch(`/api/v1/workflows/${workflowId}`);
-        if (!response.ok) throw new Error('Failed to fetch workflow');
+        if (!response.ok) {
+          console.warn(`[Ingestion] Workflow ${workflowId} not found or failed to fetch. Stopping polling.`);
+          clearInterval(pollInterval);
+          return;
+        }
         const data = await response.json() as WorkflowEntity;
         setWorkflow(data);
 
@@ -220,8 +245,8 @@ export default function IngestionPage() {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files) {
+      processSelectedFiles(e.dataTransfer.files);
     }
   };
 
@@ -238,27 +263,43 @@ export default function IngestionPage() {
     setFolderFiles([]);
   };
 
+  const processSelectedFiles = (files: FileList) => {
+    if (files.length === 0) return;
+
+    if (selectedConnector === 'folder' || files.length > 1) {
+      const fileList = Array.from(files).map(f => ({
+        name: f.name,
+        size: f.size,
+        checked: true,
+        type: f.name.split('.').pop() || 'csv',
+        fileObject: f
+      }));
+      setFolderFiles(fileList);
+      setFile(files[0]);
+      if (files.length > 1 && selectedConnector !== 'folder') {
+        setSelectedConnector('folder');
+      }
+    } else {
+      setFile(files[0]);
+    }
+  };
+
   const loadMockFolderWorkspace = () => {
-    const list = [
-      { name: 'customers.csv', size: 1024 * 128, checked: true, type: 'csv' },
-      { name: 'orders.csv', size: 1024 * 512, checked: true, type: 'csv' },
-      { name: 'products.xlsx', size: 1024 * 64, checked: true, type: 'xlsx' },
-      { name: 'events_log.json', size: 1024 * 32, checked: true, type: 'json' },
-      { name: 'metrics.parquet', size: 1024 * 256, checked: false, type: 'parquet' },
-    ];
-    setFolderFiles(list);
-    setFile(new File([], 'bulk_workspace_folder'));
-    setUploadedPath('sample-data/customers_contacts.csv');
+    setSelectedConnector('folder');
+    setTimeout(() => {
+      fileInputRef.current?.click();
+    }, 150);
   };
 
   const uploadFile = async () => {
-    if (!file) return;
+    const filesToUpload = selectedConnector === 'folder' && folderFiles.length > 0
+      ? folderFiles.filter(f => f.checked && f.fileObject).map(f => f.fileObject!)
+      : [file].filter(Boolean) as File[];
+
+    if (filesToUpload.length === 0) return;
 
     setIsUploading(true);
     setUploadProgress(10);
-
-    const formData = new FormData();
-    formData.append('file', file);
 
     const configParam = {
       bucket: bucketName,
@@ -270,20 +311,32 @@ export default function IngestionPage() {
     };
 
     try {
-      setUploadProgress(40);
-      const url = `/api/v1/uploads/${selectedConnector}?storageType=${storageType}&storageConfig=${encodeURIComponent(JSON.stringify(configParam))}`;
-      const response = await fetch(url, {
-        method: 'POST',
-        body: formData,
-      });
+      let completedCount = 0;
+      let lastUploadedPath = '';
 
-      if (!response.ok) {
-        throw new Error('Upload failed with status ' + response.status);
+      for (const currentFile of filesToUpload) {
+        const formData = new FormData();
+        formData.append('file', currentFile);
+
+        const url = `/api/v1/uploads/${selectedConnector}?storageType=${storageType}&storageConfig=${encodeURIComponent(JSON.stringify(configParam))}`;
+        const response = await fetch(url, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Upload failed for ${currentFile.name} with status ${response.status}`);
+        }
+
+        const result = await response.json();
+        lastUploadedPath = result.path;
+        
+        completedCount++;
+        setUploadProgress(Math.round((completedCount / filesToUpload.length) * 90) + 10);
       }
 
-      const result = await response.json();
       setUploadProgress(100);
-      setUploadedPath(result.path);
+      setUploadedPath(lastUploadedPath);
       setIsUploading(false);
     } catch (error) {
       console.error(error);
@@ -366,7 +419,7 @@ export default function IngestionPage() {
     if (stepIndex === 4) {
       if (workflow.status === 'paused_waiting_confirmation') return 'paused';
       if (workflow.status === 'completed') return 'completed';
-      const ingestStages = ['run_ingestion', 'bronze_storage', 'transformation', 'identity_resolution', 'deduplication', 'silver_storage', 'parquet_export', 'statistics'];
+      const ingestStages = ['run_ingestion', 'raw_storage', 'bronze_storage', 'transformation', 'identity_resolution', 'deduplication', 'normalized_storage', 'silver_storage', 'parquet_export', 'statistics'];
       if (workflow.status === 'failed' && ingestStages.includes(workflow.currentStage)) return 'failed';
       return (workflow.status === 'running' || ingestStages.includes(workflow.currentStage)) ? 'active' : 'muted';
     }
@@ -383,7 +436,8 @@ export default function IngestionPage() {
       case 'workflow': return '#60a5fa';
       case 'validation': return '#ec4899';
       case 'metadata': return '#14b8a6';
-      case 'bronze': return '#10b981';
+      case 'bronze':
+      case 'raw': return '#10b981';
       case 'worker': return '#f97316';
       case 'ingestion': return '#6366f1';
       default: return '#94a3b8';
@@ -477,6 +531,86 @@ export default function IngestionPage() {
                 </section>
               )}
 
+              {/* Enterprise Dataset Simulator */}
+              {workflow?.status !== 'completed' && (
+                <section className="card-panel" style={{ marginTop: '24px', marginBottom: '24px' }}>
+                  <div className="card-panel-header">
+                    <h3>Enterprise Dataset Simulator</h3>
+                    <p>Simulate, download, or directly ingest multi-source files (profiles, interactions, and transactions) to test customer matching and dynamic rules.</p>
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)' }}>DESIRED RECORD COUNT:</span>
+                      <input 
+                        type="number" 
+                        value={mockRowCount} 
+                        onChange={e => setMockRowCount(Math.max(1, Number(e.target.value)))}
+                        style={{ width: '100px', padding: '6px', fontSize: '12px', backgroundColor: 'var(--bg-app)', border: '1px solid var(--grid-line-minor)', color: 'var(--text-loud)', borderRadius: '4px' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <button 
+                        type="button"
+                        className="btn-secondary"
+                        style={{ flex: 1, padding: '10px 14px', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        onClick={async () => {
+                          const res = await fetch('/api/v1/uploads/mockaroo', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ datasetType: 'identity', rowCount: mockRowCount })
+                          });
+                          if (res.ok) {
+                            const data = await res.json();
+                            alert(`Customer Directory generated: ${data.filename}. Direct Ingestion to Raw storage successful!`);
+                          }
+                        }}
+                      >
+                        Ingest Customer Directory
+                      </button>
+
+                      <button 
+                        type="button"
+                        className="btn-secondary"
+                        style={{ flex: 1, padding: '10px 14px', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        onClick={async () => {
+                          const res = await fetch('/api/v1/uploads/mockaroo', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ datasetType: 'behavior', rowCount: mockRowCount })
+                          });
+                          if (res.ok) {
+                            const data = await res.json();
+                            alert(`Interaction History generated: ${data.filename}. Direct Ingestion to Raw storage successful!`);
+                          }
+                        }}
+                      >
+                        Ingest Interaction History
+                      </button>
+
+                      <button 
+                        type="button"
+                        className="btn-secondary"
+                        style={{ flex: 1, padding: '10px 14px', fontSize: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        onClick={async () => {
+                          const res = await fetch('/api/v1/uploads/mockaroo', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ datasetType: 'financial', rowCount: mockRowCount })
+                          });
+                          if (res.ok) {
+                            const data = await res.json();
+                            alert(`Transaction Records generated: ${data.filename}. Direct Ingestion to Raw storage successful!`);
+                          }
+                        }}
+                      >
+                        Ingest Transaction Records
+                      </button>
+                    </div>
+                  </div>
+                </section>
+              )}
+
               {/* Upload Panel / Success Panel */}
               <section className="card-panel">
                 <div className="card-panel-header">
@@ -492,13 +626,13 @@ export default function IngestionPage() {
                       </div>
                       <div>
                         <h4 style={{ color: 'var(--text-loud)', fontSize: '15px', fontWeight: '600', marginBottom: '2px' }}>Ingestion Completed Successfully</h4>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Dataset successfully registered and loaded into Bronze Lake.</p>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Dataset successfully registered and loaded into Raw Lake.</p>
                       </div>
                     </div>
 
                     <div className="storage-paths-display" style={{ display: 'flex', flexDirection: 'column', gap: '8px', background: 'var(--bg-app)', padding: '16px', borderRadius: '8px', border: '1px solid var(--grid-line-major)', fontSize: '13px', fontFamily: 'monospace' }}>
-                      <div><strong style={{ color: 'var(--text-loud)' }}>Bronze Path:</strong> {workflow.stages['bronze_storage']?.data?.bronzePath || 'N/A'}</div>
-                      <div><strong style={{ color: 'var(--text-loud)' }}>Silver Path:</strong> {workflow.stages['statistics']?.data?.silverPath || 'N/A'}</div>
+                      <div><strong style={{ color: 'var(--text-loud)' }}>Raw Path:</strong> {workflow.stages['raw_storage']?.data?.rawPath || workflow.stages['bronze_storage']?.data?.bronzePath || 'N/A'}</div>
+                      <div><strong style={{ color: 'var(--text-loud)' }}>Normalized Path:</strong> {workflow.stages['statistics']?.data?.normalizedPath || workflow.stages['statistics']?.data?.silverPath || 'N/A'}</div>
                       <div><strong style={{ color: 'var(--text-loud)' }}>Target Export Path:</strong> {workflow.stages['statistics']?.data?.parquetPath || 'N/A'}</div>
                     </div>
 
@@ -559,7 +693,7 @@ export default function IngestionPage() {
                             <div style={{ fontWeight: '600', marginTop: '4px', color: 'var(--text-loud)' }}>{workflow.stages['statistics'].data.transformationTimeMs}ms</div>
                           </div>
                           <div>
-                            <div style={{ color: 'var(--text-muted)' }}>Identity Matching</div>
+                            <div style={{ color: 'var(--text-muted)' }}>Customer Matching</div>
                             <div style={{ fontWeight: '600', marginTop: '4px', color: 'var(--text-loud)' }}>{workflow.stages['statistics'].data.identityResolutionTimeMs}ms</div>
                           </div>
                           <div>
@@ -687,7 +821,18 @@ export default function IngestionPage() {
                           type="file" 
                           ref={fileInputRef} 
                           style={{ display: 'none' }} 
-                          onChange={(e) => setFile(e.target.files?.[0] ?? null)} 
+                          {...(selectedConnector === 'folder' ? {
+                            webkitdirectory: "true",
+                            directory: "true",
+                            multiple: true
+                          } as any : {
+                            multiple: true
+                          })}
+                          onChange={(e) => {
+                            if (e.target.files) {
+                              processSelectedFiles(e.target.files);
+                            }
+                          }} 
                         />
                         
                         <div className="dropzone-inner">
@@ -772,7 +917,7 @@ export default function IngestionPage() {
                         </button>
                       </div>
                     </div>
-                    <p>Verify inferred schema types, validation reports, and raw content preview before ingesting to Bronze Lake.</p>
+                    <p>Verify inferred schema types, validation reports, and raw content preview before ingesting to Raw Lake.</p>
                   </div>
 
                   {workflow.validationReport && (
@@ -890,12 +1035,12 @@ export default function IngestionPage() {
                               <tr key={rowIdx}>
                                 {workflow.previewData!.schema.fields.filter(f => !hiddenColumns.includes(f.name)).map((field, colIdx) => {
                                   const val = row[field.name];
-                                  const isPii = ['email', 'phone', 'ssn', 'credit_card', 'salary', 'password', 'mobile'].includes(field.name.toLowerCase());
+                                  const isSensitive = ['email', 'phone', 'ssn', 'credit_card', 'salary', 'password', 'mobile'].includes(field.name.toLowerCase());
                                   const isNull = val === null || val === undefined || val === '';
                                   return (
                                     <td key={colIdx}>
                                       {isNull ? <span className="null-placeholder">NULL</span> : String(val)}
-                                      {isPii && <span className="pii-badge">PII</span>}
+                                      {isSensitive && <span className="pii-badge">Sensitive Data</span>}
                                     </td>
                                   );
                                 })}

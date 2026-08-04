@@ -1,11 +1,11 @@
 import fs from 'fs';
 import { parse, type Options as ParseOptions } from 'csv-parse';
-import { BronzeStore } from '@/infrastructure/storage/bronze-store';
+import { RawStore } from '@/infrastructure/storage/raw-store';
 import { IngestOptions, SchemaDefinition } from './connector';
 import { Readable } from 'stream';
 
 export class CsvIngester {
-  private readonly bronzeStore = new BronzeStore();
+  private readonly rawStore = new RawStore();
 
   constructor(private readonly r2Service?: any) {}
 
@@ -54,7 +54,7 @@ export class CsvIngester {
 
       parser.on('end', async () => {
         try {
-          const result = await this.bronzeStore.writeRecords(options.destination?.datasetId ?? 'csv', records);
+          const result = await this.rawStore.writeRecords(options.destination?.datasetId ?? 'csv', records);
           resolve({ path: result.filePath, rows: result.rowCount });
         } catch (error) {
           reject(error);

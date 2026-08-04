@@ -11,6 +11,7 @@ import { JobRunner } from './job-runner';
 import { InMemoryConnectionRepository, InMemoryDatasetRepository, InMemoryJobRepository } from '@/infrastructure/repositories/in-memory-repositories';
 import { InMemoryWorkflowRepository } from '@/infrastructure/repositories/in-memory-workflow-repository';
 import { WorkflowService } from '@/core/workflow/workflow-orchestrator';
+import { CustomerRepository, customerRepository } from '@/infrastructure/repositories/customer-repository';
 
 // Target Ingestion Architecture Services
 import { R2Service } from './r2.service';
@@ -42,6 +43,7 @@ export interface AppContext {
   deduplicationService: DeduplicationService;
   parquetService: ParquetService;
   statisticsService: StatisticsService;
+  customerRepository: CustomerRepository;
 }
 
 let contextInstance: AppContext | null = null;
@@ -110,8 +112,10 @@ export function bootstrap(): AppContext {
       deduplicationService,
       parquetService,
       statisticsService,
+      customerRepository,
     };
   }
 
   return contextInstance;
 }
+

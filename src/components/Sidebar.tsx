@@ -49,6 +49,10 @@ export default function Sidebar() {
             <Database size={18} />
             {!collapsed && <span>Data Contexthouse</span>}
           </Link>
+          <Link href="/customer360" className={getNavClass('/customer360')}>
+            <Bot size={18} />
+            {!collapsed && <span>Customer 360</span>}
+          </Link>
           <Link href="/spiderbrain" className={getNavClass('/spiderbrain')}>
             <BrainCircuit size={18} />
             {!collapsed && <span>Spiderbrain Engine</span>}

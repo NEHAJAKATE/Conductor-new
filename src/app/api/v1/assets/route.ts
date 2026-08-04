@@ -9,12 +9,12 @@ export async function GET(request: NextRequest) {
     const workflows = await context.workflowRepository.list();
     const completedWorkflows = workflows.filter(w => w.status === 'completed');
     
-    let bronzeList: any[] = [];
-    let silverList: any[] = [];
+    let rawList: any[] = [];
+    let normalizedList: any[] = [];
     let identityList: any[] = [];
 
     for (const dataset of datasets) {
-      bronzeList.push({ name: dataset.displayName, id: dataset.id });
+      rawList.push({ name: dataset.displayName, id: dataset.id });
     }
 
     for (const wf of completedWorkflows) {
@@ -22,10 +22,12 @@ export async function GET(request: NextRequest) {
       if (stats) {
         if (stats.childResults) {
           for (const child of stats.childResults) {
-            silverList.push({ name: child.name.replace(/\.[^/.]+$/, ''), path: child.silverPath });
+            const normPath = child.normalizedPath || child.silverPath;
+            normalizedList.push({ name: child.name.replace(/\.[^/.]+$/, ''), path: normPath });
           }
         } else {
-          silverList.push({ name: wf.fileName.replace(/\.[^/.]+$/, ''), path: stats.silverPath });
+          const normPath = stats.normalizedPath || stats.silverPath;
+          normalizedList.push({ name: wf.fileName.replace(/\.[^/.]+$/, ''), path: normPath });
         }
         
         const records = stats.unifiedRecords || [];
@@ -45,8 +47,14 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       datasets,
-      bronzeList,
-      silverList,
+      raw: rawList,
+      bronze: rawList,
+      bronzeList: rawList,
+      rawList,
+      normalized: normalizedList,
+      silver: normalizedList,
+      silverList: normalizedList,
+      normalizedList,
       identityList,
     }, { status: 200 });
   } catch (error) {

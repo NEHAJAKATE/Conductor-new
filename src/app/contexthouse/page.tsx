@@ -32,12 +32,12 @@ interface ProfileItem {
 }
 
 export default function ContexthousePage() {
-  const [bronzeList, setBronzeList] = useState<Array<{ name: string; id: string }>>([
+  const [rawList, setRawList] = useState<Array<{ name: string; id: string }>>([
     { name: 'src_hubspot_contacts', id: 'hubspot' },
     { name: 'src_snow_telemetry', id: 'snow' },
     { name: 'src_sdk_events', id: 'sdk' }
   ]);
-  const [silverList, setSilverList] = useState<Array<{ name: string; path: string }>>([
+  const [normalizedList, setNormalizedList] = useState<Array<{ name: string; path: string }>>([
     { name: 'stg_users', path: 'stg_users' },
     { name: 'stg_pageviews', path: 'stg_pageviews' }
   ]);
@@ -49,7 +49,7 @@ export default function ContexthousePage() {
   ]);
 
   const [activeCatalog, setActiveCatalog] = useState('dim_known_profiles');
-  const [activeCategory, setActiveCategory] = useState<'bronze' | 'silver' | 'identity' | 'gold'>('identity');
+  const [activeCategory, setActiveCategory] = useState<'raw' | 'normalized' | 'identity' | 'ready'>('identity');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -59,15 +59,17 @@ export default function ContexthousePage() {
         const res = await fetch('/api/v1/assets');
         if (res.ok) {
           const data = await res.json();
-          if (data.bronzeList?.length > 0) {
-            setBronzeList(prev => [
-              ...data.bronzeList.map((item: any) => ({ name: item.name.replace(/\.[^/.]+$/, ''), id: item.id })),
+          const rawData = data.raw || data.rawList || data.bronze || data.bronzeList;
+          if (rawData?.length > 0) {
+            setRawList(prev => [
+              ...rawData.map((item: any) => ({ name: item.name.replace(/\.[^/.]+$/, ''), id: item.id })),
               ...prev
             ]);
           }
-          if (data.silverList?.length > 0) {
-            setSilverList(prev => [
-              ...data.silverList.map((item: any) => ({ name: item.name, path: item.path })),
+          const normalizedData = data.normalized || data.normalizedList || data.silver || data.silverList;
+          if (normalizedData?.length > 0) {
+            setNormalizedList(prev => [
+              ...normalizedData.map((item: any) => ({ name: item.name, path: item.path })),
               ...prev
             ]);
           }
@@ -134,12 +136,12 @@ export default function ContexthousePage() {
             </div>
             
             <div className="tree-group">
-              <div className="tree-group-title"><HardDrive size={14}/> Bronze Lake (Raw)</div>
-              {bronzeList.map(item => (
+              <div className="tree-group-title"><HardDrive size={14}/> Raw Imported Data</div>
+              {rawList.map((item, idx) => (
                 <div 
-                  key={item.name} 
+                  key={`${item.name}-${idx}`} 
                   className={`tree-item ${activeCatalog === item.name ? 'active' : ''}`}
-                  onClick={() => handleSelectItem(item.name, 'bronze')}
+                  onClick={() => handleSelectItem(item.name, 'raw')}
                 >
                   {item.name}
                 </div>
@@ -147,12 +149,12 @@ export default function ContexthousePage() {
             </div>
 
             <div className="tree-group">
-              <div className="tree-group-title"><Layers size={14}/> Silver Lake (Norm)</div>
-              {silverList.map(item => (
+              <div className="tree-group-title"><Layers size={14}/> Clean & Standardized Data</div>
+              {normalizedList.map((item, idx) => (
                 <div 
-                  key={item.name} 
+                  key={`${item.name}-${idx}`} 
                   className={`tree-item ${activeCatalog === item.name ? 'active' : ''}`}
-                  onClick={() => handleSelectItem(item.name, 'silver')}
+                  onClick={() => handleSelectItem(item.name, 'normalized')}
                 >
                   {item.name}
                 </div>
@@ -165,18 +167,18 @@ export default function ContexthousePage() {
                 className={`tree-item ${activeCatalog === 'dim_known_profiles' ? 'active' : ''}`}
                 onClick={() => handleSelectItem('dim_known_profiles', 'identity')}
               >
-                dim_known_profiles
+                Known Customer Profiles
               </div>
               <div 
                 className={`tree-item ${activeCatalog === 'dim_anonymous_profiles' ? 'active' : ''}`}
                 onClick={() => handleSelectItem('dim_anonymous_profiles', 'identity')}
               >
-                dim_anonymous_profiles
+                Anonymous Visitor Profiles
               </div>
             </div>
 
             <div className="tree-group">
-              <div className="tree-group-title"><Star size={14}/> Gold Marts (Ready)</div>
+              <div className="tree-group-title"><Star size={14}/> Business Ready Data</div>
               <div className="tree-item">fct_activation_metrics</div>
               <div className="tree-item">fct_engine_scores</div>
             </div>
@@ -196,7 +198,7 @@ export default function ContexthousePage() {
             </div>
 
             <div className="table-wrapper">
-              {activeCategory === 'identity' || activeCategory === 'silver' ? (
+              {activeCategory === 'identity' || activeCategory === 'normalized' ? (
                 <table className="data-table">
                   <thead>
                     <tr>
@@ -244,7 +246,7 @@ export default function ContexthousePage() {
                 <p className="ai-text">
                   {activeCategory === 'identity' 
                     ? `This table contains deterministic, identity-stitched profiles merged from HubSpot and active telemetry. It is the primary driving table for all downstream Agency Agents.`
-                    : `Raw or schema-conformed staging directory in Conductor Bronze Lakehouse, registered by active connector workers.`
+                    : `Raw or schema-conformed staging directory in Conductor Raw Lake, registered by active connector workers.`
                   }
                 </p>
               </div>
@@ -281,7 +283,7 @@ export default function ContexthousePage() {
               <div className="metadata-section">
                 <h4><Network size={14}/> Lineage Preview</h4>
                 <div className="mini-lineage">
-                  <div className="lineage-node">{activeCategory === 'bronze' ? activeCatalog : 'stg_users'}</div>
+                  <div className="lineage-node">{activeCategory === 'raw' ? activeCatalog : 'stg_users'}</div>
                   <div className="lineage-arrow">↓</div>
                   <div className="lineage-node active">{activeCatalog}</div>
                   <div className="lineage-arrow">↓</div>

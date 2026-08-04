@@ -40,6 +40,25 @@ export async function POST(
       file.type || 'text/csv'
     );
 
+    const lowercaseName = file.name.toLowerCase();
+    const isCdpDataset = lowercaseName.includes('identity') || 
+                         lowercaseName.includes('behavior') || 
+                         lowercaseName.includes('financial') || 
+                         lowercaseName.includes('crm') || 
+                         lowercaseName.includes('billing') || 
+                         lowercaseName.includes('invoice') || 
+                         lowercaseName.includes('activity');
+                         
+    if (isCdpDataset) {
+      try {
+        const { datasetParserService } = require('@/core/customer360/services/dataset-parser.service');
+        await datasetParserService.parseAndIngest(buffer, file.name);
+        console.log(`[Upload Ingest] Successfully auto-ingested CDP file ${file.name}.`);
+      } catch (ingestErr) {
+        console.error(`[Upload Ingest] Warning: Failed to parse and ingest CDP dataset:`, ingestErr);
+      }
+    }
+
     const context = bootstrap();
     const metadata = await context.metadataService.registerMetadata({
       datasetId: uploadRes.key,
