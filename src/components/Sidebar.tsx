@@ -12,7 +12,8 @@ import {
   PanelLeftOpen,
   Send,
   LogOut,
-  UploadCloud
+  UploadCloud,
+  Megaphone
 } from 'lucide-react';
 import './sidebar.css';
 
@@ -64,6 +65,10 @@ export default function Sidebar() {
           <Link href="/agents" className={getNavClass('/agents')}>
             <Bot size={18} />
             {!collapsed && <span>Agency Agents</span>}
+          </Link>
+          <Link href="/marketing" className={getNavClass('/marketing')}>
+            <Megaphone size={18} />
+            {!collapsed && <span>Marketing Agents</span>}
           </Link>
           <Link href="/destinations" className={getNavClass('/destinations')}>
             <Send size={18} />

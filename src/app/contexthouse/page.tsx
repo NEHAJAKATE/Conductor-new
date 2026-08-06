@@ -214,7 +214,7 @@ export default function ContexthousePage() {
                       <tr key={idx} style={{ cursor: 'pointer' }} onClick={() => setActiveCatalog(profile.profile_id)}>
                         <td><span className="code-cell">{profile.profile_id}</span></td>
                         <td>{profile.email}</td>
-                        <td>{new Date(profile.first_seen).toLocaleString()}</td>
+                        <td suppressHydrationWarning>{new Date(profile.first_seen).toLocaleString()}</td>
                         <td>
                           <span className={profile.intent_score > 80 ? "metric-high" : profile.intent_score > 50 ? "metric-med" : "metric-low"}>
                             {profile.intent_score}

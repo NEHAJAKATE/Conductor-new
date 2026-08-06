@@ -185,3 +185,61 @@ body {
   background-color: var(--bg-surface-hover);
   color: var(--text-loud);
 }
+
+/* Universal Top Header */
+.top-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--grid-line-major);
+  padding: 16px 24px;
+  background-color: var(--bg-surface);
+  z-index: 10;
+}
+
+.header-breadcrumbs {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.header-breadcrumbs .muted {
+  color: var(--text-muted);
+}
+
+.header-breadcrumbs .active-breadcrumb {
+  color: var(--text-loud);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  background-color: var(--accent-primary);
+  color: var(--bg-app);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+
+/* Universal App Layout */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--bg-app);
+}
+
+.main-content {
+  flex: 1;
+  margin-left: 260px;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}

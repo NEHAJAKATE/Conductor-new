@@ -19,7 +19,7 @@
   align-items: center;
   border-bottom: 1px solid var(--grid-line-minor);
   padding: 16px 24px;
-  background-color: rgba(31, 45, 61, 0.2);
+  background-color: color-mix(in srgb, var(--grid-line-major) 20%, transparent);
 }
 
 .customer360-container {
@@ -36,7 +36,7 @@
   gap: 16px;
   padding: 16px;
   border-bottom: 1px solid var(--grid-line-minor);
-  background: linear-gradient(180deg, rgba(31, 45, 61, 0.2) 0%, transparent 100%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--grid-line-major) 20%, transparent) 0%, transparent 100%);
 }
 
 .c360-metric-card {
@@ -97,7 +97,7 @@
   border-right: 1px solid var(--grid-line-minor);
   display: flex;
   flex-direction: column;
-  background-color: rgba(15, 22, 30, 0.4);
+  background-color: var(--bg-surface-hover);
 }
 
 .c360-search-header {
@@ -394,7 +394,7 @@
 .c360-account-card {
   padding: 16px;
   border-radius: var(--radius-md);
-  background-color: rgba(31, 45, 61, 0.4);
+  background-color: var(--bg-surface-hover);
   border: 1px solid var(--grid-line-minor);
   display: flex;
   justify-content: space-between;
@@ -671,7 +671,7 @@
   padding: 8px 12px;
   border-radius: var(--radius-md);
   border: 1px solid var(--grid-line-minor);
-  background-color: rgba(31, 45, 61, 0.15);
+  background-color: var(--bg-surface-hover);
   cursor: pointer;
   transition: all 0.2s ease;
   min-width: 170px;
@@ -730,7 +730,7 @@
 }
 
 .c360-pipeline-drawer {
-  background-color: rgba(18, 28, 38, 0.6);
+  background-color: var(--bg-surface-hover);
   border-bottom: 1px solid var(--grid-line-minor);
   padding: 16px 24px;
   display: flex;

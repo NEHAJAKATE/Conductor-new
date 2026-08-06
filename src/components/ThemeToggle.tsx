@@ -6,14 +6,17 @@ export default function ThemeToggle() {
   const [theme, setTheme] = useState('dark');
 
   useEffect(() => {
-    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    const savedTheme = localStorage.getItem('theme');
+    const currentTheme = savedTheme || document.documentElement.getAttribute('data-theme') || 'dark';
     setTheme(currentTheme);
+    document.documentElement.setAttribute('data-theme', currentTheme);
   }, []);
 
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
     document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
   };
 
   return (
