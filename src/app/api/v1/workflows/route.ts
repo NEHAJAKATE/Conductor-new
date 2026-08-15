@@ -1,6 +1,17 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { bootstrap } from '@/core/services/bootstrap';
 
+export async function GET() {
+  try {
+    const context = bootstrap();
+    const workflows = await context.workflowRepository.list();
+    return NextResponse.json({ workflows }, { status: 200 });
+  } catch (error) {
+    console.error('[Workflow API] List failed:', error);
+    return NextResponse.json({ message: (error as Error).message }, { status: 500 });
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { 

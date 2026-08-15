@@ -1,15 +1,46 @@
 import { ValidationIssue, ValidationResult } from '@/core/connectors/connector';
 
+export interface DatasetValidationReport extends ValidationResult {
+  acceptedRecords: number;
+  rejectedRecords: number;
+  warningCount: number;
+  detectedDomain: 'transaction' | 'business' | 'outstanding' | 'inventory' | 'customer' | 'generic';
+}
+
 export class ValidationService {
+  /**
+   * Detect schema domain from headers
+   */
+  detectDomain(headers: string[]): 'transaction' | 'business' | 'outstanding' | 'inventory' | 'customer' | 'generic' {
+    const lower = headers.map(h => h.toLowerCase());
+    if (lower.some(h => ['vcn', 'c_date', 'type2', 'amount', 'qty', 'rate'].includes(h))) {
+      return 'transaction';
+    }
+    if (lower.some(h => ['description', 'opening stock unit'].includes(h)) && !lower.includes('total')) {
+      return 'inventory';
+    }
+    if (lower.includes('total') && (lower.includes('description') || lower.includes('groupuid') || lower.some(h => h.includes('older')))) {
+      return 'outstanding';
+    }
+    if (lower.some(h => ['tin', 'panno', 'ledger', 'licence', 'cramount', 'crdays'].includes(h))) {
+      return 'business';
+    }
+    if (lower.some(h => ['customer_id', 'customerid', 'pan', 'aadhaar', 'passport'].includes(h))) {
+      return 'customer';
+    }
+    return 'generic';
+  }
+
   async validate(headers: string[], rows: string[][], rules: {
     requiredColumns?: string[];
     regexRules?: Record<string, RegExp>;
     expectedTypes?: Record<string, string>;
-  } = {}): Promise<ValidationResult> {
+  } = {}): Promise<DatasetValidationReport> {
     const issues: ValidationIssue[] = [];
     const recordCount = rows.length;
+    const detectedDomain = this.detectDomain(headers);
 
-    console.log(`[ValidationService] Auditing dataset with ${headers.length} headers and ${rows.length} sample rows`);
+    console.log(`[ValidationService] Auditing ${detectedDomain} dataset with ${headers.length} headers and ${rows.length} rows`);
 
     if (headers.length <= 1) {
       issues.push({
@@ -20,7 +51,30 @@ export class ValidationService {
       });
     }
 
-    const required = rules.requiredColumns || ['id', 'email', 'name', 'timestamp'];
+    // Determine required columns based on domain if not explicitly passed
+    let required = rules.requiredColumns;
+    if (!required) {
+      switch (detectedDomain) {
+        case 'transaction':
+          required = ['C_DATE', 'VCN', 'AMOUNT'];
+          break;
+        case 'business':
+          required = ['name'];
+          break;
+        case 'outstanding':
+          required = ['Description', 'Total'];
+          break;
+        case 'inventory':
+          required = ['Description'];
+          break;
+        case 'customer':
+          required = ['name'];
+          break;
+        default:
+          required = [];
+      }
+    }
+
     const headerSet = new Set(headers.map(h => h.toLowerCase()));
     for (const reqCol of required) {
       const match = headers.find(h => h.toLowerCase() === reqCol.toLowerCase());
@@ -29,7 +83,7 @@ export class ValidationService {
           field: reqCol,
           severity: 'warning',
           code: 'missing_required_column',
-          message: `Recommended/Required column '${reqCol}' is missing from the dataset.`,
+          message: `Recommended column '${reqCol}' is missing from the dataset.`,
         });
       }
     }
@@ -50,6 +104,7 @@ export class ValidationService {
     let nullCount = 0;
     let duplicateRowKeys = new Set<string>();
     let duplicateRowCount = 0;
+    let rejectedCount = 0;
 
     for (let rIdx = 0; rIdx < rows.length; rIdx += 1) {
       const row = rows[rIdx];
@@ -68,27 +123,14 @@ export class ValidationService {
         }
 
         if (value !== '') {
-          if (header.toLowerCase().includes('email')) {
+          if (header.toLowerCase() === 'email' && value.includes('@')) {
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(value)) {
               issues.push({
                 field: header,
-                severity: 'warning',
-                code: 'invalid_email_format',
-                message: `Row ${rIdx + 1}: Invalid email address format: '${value}'`,
-                rowSample: { rowNumber: rIdx + 1, value },
-              });
-            }
-          }
-
-          if (header.toLowerCase().includes('phone')) {
-            const phoneRegex = /^\+?[0-9\s\-()]{7,18}$/;
-            if (!phoneRegex.test(value)) {
-              issues.push({
-                field: header,
                 severity: 'info',
-                code: 'invalid_phone_format',
-                message: `Row ${rIdx + 1}: Non-standard phone format: '${value}'`,
+                code: 'non_standard_email',
+                message: `Row ${rIdx + 1}: Non-standard email format: '${value}'`,
                 rowSample: { rowNumber: rIdx + 1, value },
               });
             }
@@ -102,7 +144,7 @@ export class ValidationService {
         field: '*',
         severity: 'info',
         code: 'duplicate_rows',
-        message: `${duplicateRowCount} duplicate row values detected in sample data.`,
+        message: `${duplicateRowCount} duplicate row values detected in dataset.`,
       });
     }
 
@@ -114,23 +156,21 @@ export class ValidationService {
         field: piiColumns.join(', '),
         severity: 'info',
         code: 'pii_detected',
-        message: `PII attributes detected: ${piiColumns.join(', ')}. Field encryption/masking policies will apply.`,
+        message: `PII attributes detected: ${piiColumns.join(', ')}. Field governance rules will apply.`,
       });
     }
 
-    if (nullCount > 0) {
-      issues.push({
-        field: '*',
-        severity: 'warning',
-        code: 'null_values_present',
-        message: `${nullCount} empty cells found. Null-replacement rules will replace these with database defaults.`,
-      });
-    }
+    const errorCount = issues.filter(i => i.severity === 'error').length;
+    const warningCount = issues.filter(i => i.severity === 'warning').length;
 
     return {
-      valid: issues.filter(i => i.severity === 'error').length === 0,
+      valid: errorCount === 0,
       issues,
       recordCount,
+      acceptedRecords: recordCount - rejectedCount,
+      rejectedRecords: rejectedCount,
+      warningCount,
+      detectedDomain,
       fieldStatistics: {
         totalCells: headers.length * rows.length,
         nullCells: nullCount,

@@ -305,7 +305,15 @@ let financialStore: FinancialRecord[] = [
 
 export class IdentityRepository {
   async save(record: IdentityRecord): Promise<void> {
-    const idx = identityStore.findIndex(r => r.email.toLowerCase() === record.email.toLowerCase() || r.customerId === record.customerId);
+    const recEmail = (record.email || '').trim().toLowerCase();
+    const recCustId = (record.customerId || '').trim();
+    const idx = identityStore.findIndex(r => {
+      const rEmail = (r.email || '').trim().toLowerCase();
+      const rCustId = (r.customerId || '').trim();
+      const emailMatch = recEmail !== '' && rEmail !== '' && rEmail === recEmail;
+      const idMatch = recCustId !== '' && rCustId !== '' && rCustId === recCustId;
+      return emailMatch || idMatch;
+    });
     if (idx >= 0) {
       identityStore[idx] = { ...identityStore[idx], ...record };
     } else {

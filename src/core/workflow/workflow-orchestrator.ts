@@ -12,9 +12,16 @@ import { ValidationService } from '@/core/services/validation.service';
 import { TransformationService } from '@/core/services/transformation.service';
 import { IdentityService } from '@/core/identity/identity.service';
 import { DeduplicationService } from '@/core/identity/deduplication.service';
-import { ParquetService } from '@/core/services/parquet.service';
 import { StatisticsService, PipelineMetrics } from '@/core/telemetry/statistics.service';
 import { StorageAdapterFactory } from '@/core/storage/storage-adapter';
+import { CanonicalMappingService } from '@/core/mapping/canonical-mapping.service';
+import { businessRepository } from '@/infrastructure/repositories/business-repository';
+import { 
+  transactionRepository, 
+  inventoryRepository, 
+  outstandingRepository 
+} from '@/infrastructure/repositories/canonical-repositories';
+import { customerRepository } from '@/infrastructure/repositories/customer-repository';
 
 export interface WorkflowStageStatus {
   status: 'pending' | 'running' | 'completed' | 'failed' | 'paused' | 'skipped';
@@ -640,6 +647,79 @@ export class WorkflowService {
       if (workflow.stages['silver_storage']) {
         this.logStage(workflow, 'silver_storage', `Silver layer created. Path: ${normalizedPath}`, 'success');
       }
+
+      // Domain-Aware Canonical Store Ingestion
+      try {
+        const headers = workflow.previewData?.schema?.fields?.map((f: any) => f.name) || Object.keys(transformedRecords[0] || {});
+        const domain = this.validationService.detectDomain(headers);
+        console.log(`[WorkflowService] Domain detected: ${domain}, records count: ${transformedRecords.length}, headers: ${headers.join(',')}`);
+
+        if (domain === 'transaction') {
+          const txs = transformedRecords.map(r => CanonicalMappingService.mapJournalRowToTransaction(r));
+          console.log(`[WorkflowService] Saving ${txs.length} transactions to canonical repository... Sample tx:`, JSON.stringify(txs[0]));
+          await transactionRepository.saveBatch(txs);
+          const afterCount = await transactionRepository.getAll();
+          console.log(`[WorkflowService] Total transactions in repository after save: ${afterCount.length}`);
+          this.logStage(workflow, 'normalized_storage', `Loaded ${txs.length} transactions into Sales & Purchase Operations.`, 'success');
+        } else if (domain === 'business') {
+          for (const r of transformedRecords) {
+            const b = CanonicalMappingService.mapPartyMasterToBusiness(r);
+            await businessRepository.save(b);
+          }
+          this.logStage(workflow, 'normalized_storage', `Loaded ${transformedRecords.length} party profiles into Business 360.`, 'success');
+        } else if (domain === 'outstanding') {
+          const outs = transformedRecords.map(r => CanonicalMappingService.mapOutstandingRow(r)).filter(Boolean) as any[];
+          await outstandingRepository.saveBatch(outs);
+          this.logStage(workflow, 'normalized_storage', `Loaded ${outs.length} accounts into Outstanding & Ageing Ledger.`, 'success');
+        } else if (domain === 'inventory') {
+          const invs = transformedRecords.map(r => CanonicalMappingService.mapStockRow(r)).filter(Boolean) as any[];
+          await inventoryRepository.saveBatch(invs);
+          this.logStage(workflow, 'normalized_storage', `Loaded ${invs.length} items into Inventory & Warehouse Stock.`, 'success');
+        } else {
+          // Person-Centric Customer CDP
+          for (const r of deduplicationResult.deduplicatedRecords) {
+            await customerRepository.save({
+              id: r.id || `cust_${Date.now()}_${Math.random()}`,
+              name: r.name || r.email || r.flight_number || 'Unnamed Customer',
+              email: r.email || undefined,
+              phone: r.phone || r.mobile || undefined,
+              pan: r.pan || undefined,
+              aadhaar: r.aadhaar || undefined,
+              primaryAddress: r.city || r.departure_city ? {
+                city: r.city || r.departure_city,
+                country: r.country || r.departure_country || 'Global',
+              } : undefined,
+              behavioralEvents: r.issue || r.ticket_id || r.flight_status ? [{
+                id: `evt_${Date.now()}_${Math.random()}`,
+                type: 'support_ticket',
+                category: r.airline_name || 'Support',
+                timestamp: r.departure_date || new Date().toISOString(),
+                payload: {
+                  flightNumber: r.flight_number,
+                  ticketId: r.ticket_id,
+                  status: r.flight_status || r.status,
+                  departure: r.departure_airport,
+                  arrival: r.arrival_airport,
+                  csat: r.csat,
+                }
+              }] : [],
+              dataLineage: [{
+                sourceId: workflow.id,
+                sourceDataset: workflow.fileName,
+                connectorType: workflow.connectorType,
+                ingestedAt: new Date().toISOString(),
+                recordIndex: 0
+              }],
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            });
+          }
+          this.logStage(workflow, 'normalized_storage', `Loaded ${deduplicationResult.deduplicatedRecords.length} profiles into Customer 360 CDP.`, 'success');
+        }
+      } catch (routingErr) {
+        console.error('[WorkflowService] Canonical routing error:', routingErr);
+      }
+
       await this.workflowRepository.save(workflow);
 
       const parquetStart = Date.now();

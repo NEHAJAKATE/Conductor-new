@@ -55,8 +55,22 @@ export class ParserFactory {
       return { headers: [], rows: [] };
     }
 
-    const headers = rawRows[0].map((h, i) => String(h || '').trim() || `column_${i + 1}`);
-    const rows = rawRows.slice(1).map(row => row.map(cell => cell === null || cell === undefined ? '' : String(cell)));
+    // Smart Header Row Detection: Find first row with multiple non-empty cells
+    let headerRowIdx = 0;
+    for (let i = 0; i < Math.min(15, rawRows.length); i++) {
+      const row = rawRows[i];
+      if (row && row.filter(c => c !== undefined && c !== null && String(c).trim() !== '').length >= 2) {
+        headerRowIdx = i;
+        break;
+      }
+    }
+
+    const rawHeaderRow = rawRows[headerRowIdx] || [];
+    const headers = rawHeaderRow.map((h, i) => String(h || '').trim() || `column_${i + 1}`);
+    const rows = rawRows.slice(headerRowIdx + 1)
+      .filter(row => row && row.some(cell => cell !== undefined && cell !== null && String(cell).trim() !== ''))
+      .map(row => headers.map((_, i) => row[i] === null || row[i] === undefined ? '' : String(row[i])));
+
     return { headers, rows };
   }
 

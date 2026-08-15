@@ -5,8 +5,19 @@ export type ConnectionEntityRecord = ConnectionEntity;
 export type DatasetEntityRecord = DatasetEntity;
 export type JobEntityRecord = JobEntity;
 
+declare global {
+  var __connectionStorageMap__: Map<string, ConnectionEntityRecord> | undefined;
+  var __datasetStorageMap__: Map<string, DatasetEntityRecord> | undefined;
+  var __jobStorageMap__: Map<string, JobEntityRecord> | undefined;
+}
+
 export class InMemoryConnectionRepository {
-  private readonly storage = new Map<string, ConnectionEntityRecord>();
+  private get storage(): Map<string, ConnectionEntityRecord> {
+    if (!globalThis.__connectionStorageMap__) {
+      globalThis.__connectionStorageMap__ = new Map<string, ConnectionEntityRecord>();
+    }
+    return globalThis.__connectionStorageMap__;
+  }
 
   async save(connection: ConnectionConfig): Promise<ConnectionEntityRecord> {
     const entity: ConnectionEntityRecord = {
@@ -31,7 +42,12 @@ export class InMemoryConnectionRepository {
 }
 
 export class InMemoryDatasetRepository {
-  private readonly storage = new Map<string, DatasetEntityRecord>();
+  private get storage(): Map<string, DatasetEntityRecord> {
+    if (!globalThis.__datasetStorageMap__) {
+      globalThis.__datasetStorageMap__ = new Map<string, DatasetEntityRecord>();
+    }
+    return globalThis.__datasetStorageMap__;
+  }
 
   async save(dataset: DatasetEntity): Promise<DatasetEntityRecord> {
     const entity: DatasetEntityRecord = {
@@ -53,7 +69,12 @@ export class InMemoryDatasetRepository {
 }
 
 export class InMemoryJobRepository {
-  private readonly storage = new Map<string, JobEntityRecord>();
+  private get storage(): Map<string, JobEntityRecord> {
+    if (!globalThis.__jobStorageMap__) {
+      globalThis.__jobStorageMap__ = new Map<string, JobEntityRecord>();
+    }
+    return globalThis.__jobStorageMap__;
+  }
 
   async save(job: JobEntity): Promise<JobEntityRecord> {
     this.storage.set(job.id, job);

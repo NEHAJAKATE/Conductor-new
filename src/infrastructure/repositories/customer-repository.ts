@@ -85,7 +85,17 @@ export class CustomerRepository {
         }
       }
 
-      const uuid = matchedUuid || uuidv5(`email:${record.email.toLowerCase().trim()}`, config.identity.namespace);
+      const recordEmail = (record.email || '').trim().toLowerCase();
+      const canonicalSeed = matchedUuid 
+        ? null 
+        : recordEmail 
+          ? `email:${recordEmail}` 
+          : record.customerId 
+            ? `id:${record.customerId}` 
+            : record.cookieId 
+              ? `cookie:${record.cookieId}` 
+              : `record:${record.name || 'anon'}_${record.phone || 'nophone'}_${record.sourceSystem || 'unknown'}`;
+      const uuid = matchedUuid || uuidv5(canonicalSeed!, config.identity.namespace);
       const existingProfile = profilesMap.get(uuid);
 
       if (existingProfile) {

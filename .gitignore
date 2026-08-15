@@ -40,5 +40,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# local databases
+# local databases & scratch
 /data/
+/scratch/
+/bin/git/
+inspect_tables_out.txt
+test_run_output.json
+test_atc_end_to_end_transpiled.js
