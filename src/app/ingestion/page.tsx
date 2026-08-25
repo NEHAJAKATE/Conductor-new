@@ -25,6 +25,7 @@ import {
   HelpCircle,
   X
 } from 'lucide-react';
+import SchemaStudioModal from '@/components/SchemaStudioModal';
 import './ingestion.css';
 
 interface WorkflowStageStatus {
@@ -193,6 +194,7 @@ export default function IngestionPage() {
   const [logsFilter, setLogsFilter] = useState<string>('all');
   const [rejectedData, setRejectedData] = useState<{ total: number; rows: any[] }>({ total: 0, rows: [] });
   const [isRejectedModalOpen, setIsRejectedModalOpen] = useState(false);
+  const [isSchemaStudioOpen, setIsSchemaStudioOpen] = useState(false);
 
   const terminalEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -661,13 +663,23 @@ export default function IngestionPage() {
                     <strong>Ingestion Audit & Rejection Log:</strong> {rejectedData.total} quarantined records tracked with specific failure reasons
                   </span>
                 </div>
-                <button 
-                  className="btn-outline" 
-                  onClick={() => setIsRejectedModalOpen(true)}
-                  style={{ fontSize: '12px', padding: '4px 14px', height: '32px' }}
-                >
-                  View Rejected Details ({rejectedData.total})
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button 
+                    className="btn-outline" 
+                    onClick={() => setIsSchemaStudioOpen(true)}
+                    style={{ fontSize: '12px', padding: '4px 14px', height: '32px', display: 'flex', alignItems: 'center', gap: '6px', color: '#60a5fa', borderColor: 'rgba(96, 165, 250, 0.4)' }}
+                  >
+                    <Database size={14} />
+                    <span>Schema Studio & Parameters</span>
+                  </button>
+                  <button 
+                    className="btn-outline" 
+                    onClick={() => setIsRejectedModalOpen(true)}
+                    style={{ fontSize: '12px', padding: '4px 14px', height: '32px' }}
+                  >
+                    View Rejected Details ({rejectedData.total})
+                  </button>
+                </div>
               </div>
 
               {/* Upload Panel / Success Panel */}
@@ -1270,6 +1282,12 @@ export default function IngestionPage() {
           </div>
         </div>
       )}
+
+      {/* Schema Studio & Data Dictionary Modal */}
+      <SchemaStudioModal 
+        isOpen={isSchemaStudioOpen} 
+        onClose={() => setIsSchemaStudioOpen(false)} 
+      />
     </div>
   );
 }

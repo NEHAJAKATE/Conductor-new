@@ -124,6 +124,10 @@ export class BusinessRepository {
         outstandingMatchType: business.outstandingMatchType !== undefined ? business.outstandingMatchType : existing.outstandingMatchType,
         outstandingMatchConfidence: business.outstandingMatchConfidence !== undefined ? business.outstandingMatchConfidence : existing.outstandingMatchConfidence,
         outstandingMatchedAt: business.outstandingMatchedAt !== undefined ? business.outstandingMatchedAt : existing.outstandingMatchedAt,
+        customAttributes: (existing.customAttributes || business.customAttributes) ? {
+          ...(existing.customAttributes || {}),
+          ...(business.customAttributes || {}),
+        } : undefined,
         updatedAt: new Date().toISOString(),
       };
 

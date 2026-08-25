@@ -85,6 +85,7 @@ export interface BusinessEntity {
   aliasLedgers?: string[]; // Preserves all distinct ledger account strings under this tax ID
   needsReview?: boolean;   // Flags GSTIN/PAN collisions for business review
   reviewReason?: string;
+  customAttributes?: Record<string, any>; // Dynamic user-defined custom parameters
   sourceSystem: string;
   createdAt: string;
   updatedAt: string;
@@ -133,6 +134,7 @@ export interface TransactionEntity {
   netAmount: number;
   taxAmount: number;
   grossAmount: number;
+  customAttributes?: Record<string, any>; // Dynamic user-defined custom parameters
   sourceSystem: string;
   createdAt: string;
 }
@@ -147,6 +149,7 @@ export interface ProductEntity {
   mrp?: number;
   defaultRate?: number;
   gstRate?: number;
+  customAttributes?: Record<string, any>;
 }
 
 export interface InventoryEntity {
@@ -159,6 +162,7 @@ export interface InventoryEntity {
   reorderLevel?: number;
   unit: string;
   valuationAmount?: number;
+  customAttributes?: Record<string, any>;
   lastUpdated: string;
 }
 
@@ -193,6 +197,7 @@ export interface OutstandingEntity {
   dataSourceType: 'monthly_snapshot' | 'invoice_level';
   notice?: string;
   groupUid?: string;
+  customAttributes?: Record<string, any>;
   lastUpdated: string;
 }
 
@@ -206,5 +211,6 @@ export interface PaymentEntity {
   balance: number;
   drCr: 'Dr' | 'Cr';
   particulars?: string;
+  customAttributes?: Record<string, any>;
   sourceSystem: string;
 }

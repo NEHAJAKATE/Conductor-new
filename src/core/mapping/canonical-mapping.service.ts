@@ -29,6 +29,21 @@ export interface SchemaMappingTemplate {
   rules: FieldMappingRule[];
 }
 
+const PARTY_KNOWN_KEYS = new Set([
+  'tin', 'ptgstno', 'gstin', 'panno', 'itpanno', 'pan', 'ledger', 'name', 'pname', 'code', 
+  'licence', 'group', 'address1', 'address2', 'address3', 'city', 'pin', 'area', 'rout', 
+  'contact', 'phone1', 'phone2', 'mobile', 'resi', 'fax', 'email', 'site', 'bank', 'branch', 
+  'crdays', 'cramount', 'limitbill', 'limitday', 'limittype', 'freez', 'type', 'mr', 'tpt', 
+  'tptdlv', 'bankadd1', 'bankadd2', 'stno'
+]);
+
+const JOURNAL_KNOWN_KEYS = new Set([
+  'c_date', 'date', 'vcn', 'type2', 'type', 'pname', 'partyname', 'ptgstno', 'gstin', 
+  'itpanno', 'pan', 'name', 'productname', 'batch', 'qty', 'quantity', 'free', 'rate', 
+  'schmamt', 'discount', 'amount', 'gst', 'taxamt', 'mrp', 'mrpamt', 'company', 
+  'areaname', 'routname', 'salestype', 'bnkacctno', 'ifsccode'
+]);
+
 export class CanonicalMappingService {
   /**
    * Normalize dates from various formats (e.g., '01-Apr-2026', '01/04/2026', '2026-04-01') to ISO-8601
@@ -210,6 +225,7 @@ export class CanonicalMappingService {
         bankName: String(raw.bank).trim(),
         branch: raw.branch ? String(raw.branch).trim() : undefined,
       } : undefined,
+      customAttributes: CanonicalMappingService.extractCustomAttributes(raw, PARTY_KNOWN_KEYS),
       sourceSystem: 'Marg ERP',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -285,6 +301,7 @@ export class CanonicalMappingService {
       netAmount,
       taxAmount,
       grossAmount: netAmount + taxAmount,
+      customAttributes: CanonicalMappingService.extractCustomAttributes(raw, JOURNAL_KNOWN_KEYS),
       sourceSystem: 'Marg ERP Journal',
       createdAt: isoDate,
     };
@@ -418,5 +435,23 @@ export class CanonicalMappingService {
       unit: 'Units',
       lastUpdated: '2026-04-01T00:00:00.000Z',
     };
+  }
+
+  /**
+   * Helper to harvest dynamic/unknown columns uploaded in Excel/CSV into customAttributes
+   */
+  static extractCustomAttributes(raw: Record<string, any>, knownKeys: Set<string>): Record<string, any> | undefined {
+    const custom: Record<string, any> = {};
+    for (const [key, val] of Object.entries(raw)) {
+      const cleanKey = key.trim();
+      const normalizedKey = cleanKey.toLowerCase();
+      if (!knownKeys.has(normalizedKey) && val !== undefined && val !== null && val !== '') {
+        // Skip purely numeric index keys from standard sheet parsers
+        if (!/^\d+$/.test(cleanKey)) {
+          custom[cleanKey] = val;
+        }
+      }
+    }
+    return Object.keys(custom).length > 0 ? custom : undefined;
   }
 }
