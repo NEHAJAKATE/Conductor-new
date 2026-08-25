@@ -10,6 +10,7 @@ import {
 import { schedulerService } from '../scheduler/scheduler.service';
 
 import { CanonicalMappingService } from '../mapping/canonical-mapping.service';
+import { CreditLimitService } from '../pipeline/credit-limit.service';
 
 export interface OutstandingMatchBreakdown {
   totalRows: number;
@@ -371,6 +372,34 @@ export class AtcIngestRunner {
           recordsRejected: 0,
         });
       }
+
+      // 6. Dynamic Credit Limit Computation (Abhishek's Rule: avg monthly sale × 1.5)
+      console.log('\n[AtcIngestRunner] Step 6: Computing dynamic credit limits...');
+      const allTransactions = await transactionRepository.getAll();
+      const allBusinesses = await businessRepository.list();
+
+      // Resolve ALL sales to businesses ONCE, using the robust matcher
+      const resolvedMonthlySalesMap = await CreditLimitService.buildResolvedMonthlySalesMap(allTransactions);
+
+      let creditComputedCount = 0;
+      let creditNoHistoryCount = 0;
+      let creditBreachedCount = 0;
+
+      for (const business of allBusinesses) {
+        if (business.classification === 'field_staff') continue;
+
+        const creditResult = CreditLimitService.compute(business, resolvedMonthlySalesMap);
+        business.credit = { ...business.credit, ...creditResult };
+        await businessRepository.save(business);
+
+        creditComputedCount++;
+        if (creditResult.creditStatus === 'NO_HISTORY') creditNoHistoryCount++;
+        if (creditResult.creditStatus === 'BREACHED') creditBreachedCount++;
+      }
+
+      console.log(
+        `[AtcIngestRunner] Credit limits computed: ${creditComputedCount} | NO_HISTORY: ${creditNoHistoryCount} | BREACHED: ${creditBreachedCount}`
+      );
 
       this.isInitialized = true;
       const totalDurationMs = Date.now() - startTime;
