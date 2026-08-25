@@ -33,13 +33,26 @@ export interface BusinessContact {
   website?: string;
 }
 
+export type CreditStatus = 'WITHIN_LIMIT' | 'APPROACHING_LIMIT' | 'BREACHED' | 'NO_HISTORY';
+
 export interface BusinessCreditProfile {
+  // --- Existing ERP static fields (from partyMaster.xls) ---
   creditDays: number;
   creditLimit: number;
   limitBills?: number;
   limitDays?: number;
   limitType?: 'Only Indicate' | 'Stop Bill' | 'None';
   isFrozen?: boolean;
+
+  // --- Dynamic Credit Engine (computed from transaction history) ---
+  dynamicCreditLimit?: number;    // avgMonthlySale × creditMultiplier
+  avgMonthlySale?: number;        // Average of monthly sale totals
+  monthsOfHistory?: number;       // How many months of sales data exist
+  creditMultiplier?: number;      // Default 1.5 (45 days), configurable per customer
+  creditUtilization?: number;     // (currentOutstanding / dynamicCreditLimit) × 100
+  creditStatus?: CreditStatus;    // Computed status
+  creditStatusReason?: string;    // Human-readable explanation
+  lastCreditComputedAt?: string;  // ISO timestamp of last computation
 }
 
 export type OutstandingMatchType = 'DIRECT_CANONICAL_ID' | 'LEDGER_NAME_MATCH' | 'DISPLAY_NAME_FALLBACK';
