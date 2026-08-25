@@ -44,6 +44,13 @@ interface Business {
     creditDays: number;
     limitType?: string;
     isFrozen?: boolean;
+    dynamicCreditLimit?: number;
+    avgMonthlySale?: number;
+    monthsOfHistory?: number;
+    creditMultiplier?: number;
+    creditUtilization?: number;
+    creditStatus?: 'WITHIN_LIMIT' | 'APPROACHING_LIMIT' | 'BREACHED' | 'NO_HISTORY';
+    creditStatusReason?: string;
   };
   totalSales?: number;
   currentOutstanding?: number;
@@ -102,6 +109,31 @@ export default function Business360Page() {
         return <span className="badge badge-neutral">Field Staff</span>;
       default:
         return <span className="badge badge-neutral">Standard Account</span>;
+    }
+  };
+
+  const getCreditStatusBadge = (status?: string, utilization?: number) => {
+    switch (status) {
+      case 'BREACHED':
+        return (
+          <span className="badge" style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)', color: '#f87171', border: '1px solid #ef4444' }}>
+            BREACHED ({utilization}%)
+          </span>
+        );
+      case 'APPROACHING_LIMIT':
+        return (
+          <span className="badge" style={{ backgroundColor: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', border: '1px solid #f59e0b' }}>
+            NEAR LIMIT ({utilization}%)
+          </span>
+        );
+      case 'WITHIN_LIMIT':
+        return (
+          <span className="badge" style={{ backgroundColor: 'rgba(16, 185, 129, 0.2)', color: '#34d399', border: '1px solid #10b981' }}>
+            WITHIN LIMIT
+          </span>
+        );
+      default:
+        return <span className="badge badge-neutral">NO SALES HISTORY</span>;
     }
   };
 
@@ -241,20 +273,31 @@ export default function Business360Page() {
                       </td>
                       <td>{getClassificationBadge(b.classification)}</td>
                       <td>
-                        {b.credit.creditLimit > 0 ? (
+                        {b.credit.dynamicCreditLimit && b.credit.dynamicCreditLimit > 0 ? (
                           <div>
-                            <div>₹{b.credit.creditLimit.toLocaleString()}</div>
+                            <div style={{ fontWeight: 600, color: '#f8fafc' }}>
+                              ₹{Math.round(b.credit.dynamicCreditLimit).toLocaleString()}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', marginTop: '0.2rem' }}>
+                              {getCreditStatusBadge(b.credit.creditStatus, b.credit.creditUtilization)}
+                            </div>
+                          </div>
+                        ) : b.credit.creditLimit > 0 ? (
+                          <div>
+                            <div>₹{b.credit.creditLimit.toLocaleString()} (Static)</div>
                             <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{b.credit.creditDays} Days</div>
                           </div>
                         ) : (
-                          <span style={{ color: '#64748b' }}>Not Set</span>
+                          <div>
+                            <span style={{ color: '#64748b' }}>No History</span>
+                          </div>
                         )}
                       </td>
                       <td>
                         {b.currentOutstanding !== undefined && b.currentOutstanding !== 0 ? (
                           <span style={{ 
                             fontWeight: 600, 
-                            color: b.currentOutstanding > (b.credit.creditLimit || 0) && b.credit.creditLimit > 0 ? '#f87171' : '#34d399' 
+                            color: b.credit.creditStatus === 'BREACHED' ? '#f87171' : b.currentOutstanding < 0 ? '#60a5fa' : '#34d399' 
                           }}>
                             ₹{Math.round(b.currentOutstanding).toLocaleString()}
                           </span>
@@ -328,15 +371,68 @@ export default function Business360Page() {
                   </div>
                 </div>
 
-                <div className="profile-section">
-                  <h4>Credit Policy & Financial Standing</h4>
+                <div className="profile-section" style={{ borderLeft: '3px solid #60a5fa', paddingLeft: '1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    <h4 style={{ margin: 0 }}>Dynamic Credit Engine (45-Day Threshold)</h4>
+                    {getCreditStatusBadge(activeBusiness.credit.creditStatus, activeBusiness.credit.creditUtilization)}
+                  </div>
+                  
                   <div className="detail-grid">
                     <div className="detail-item">
-                      <span className="detail-label">Credit Limit</span>
+                      <span className="detail-label">Dynamic Limit (1.5x Avg)</span>
+                      <span className="detail-value" style={{ color: '#60a5fa', fontWeight: 700, fontSize: '1.05rem' }}>
+                        ₹{activeBusiness.credit.dynamicCreditLimit ? Math.round(activeBusiness.credit.dynamicCreditLimit).toLocaleString() : 'N/A'}
+                      </span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">Avg Monthly Purchases</span>
+                      <span className="detail-value">
+                        ₹{activeBusiness.credit.avgMonthlySale ? Math.round(activeBusiness.credit.avgMonthlySale).toLocaleString() : 'N/A'}
+                      </span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">Current Outstanding</span>
+                      <span className="detail-value" style={{ 
+                        color: activeBusiness.credit.creditStatus === 'BREACHED' ? '#f87171' : '#34d399', 
+                        fontWeight: 700 
+                      }}>
+                        ₹{Math.round(activeBusiness.currentOutstanding || 0).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">Limit Utilization</span>
+                      <span className="detail-value" style={{ 
+                        color: (activeBusiness.credit.creditUtilization || 0) >= 100 ? '#f87171' : '#38bdf8',
+                        fontWeight: 600 
+                      }}>
+                        {activeBusiness.credit.creditUtilization !== undefined ? `${activeBusiness.credit.creditUtilization}%` : 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {activeBusiness.credit.creditStatusReason && (
+                    <div style={{ 
+                      marginTop: '0.75rem', 
+                      padding: '0.5rem 0.75rem', 
+                      borderRadius: '6px', 
+                      backgroundColor: 'rgba(255,255,255,0.03)', 
+                      fontSize: '0.8rem',
+                      color: '#94a3b8' 
+                    }}>
+                      <strong>Reason: </strong> {activeBusiness.credit.creditStatusReason}
+                    </div>
+                  )}
+                </div>
+
+                <div className="profile-section">
+                  <h4>Static ERP Policy</h4>
+                  <div className="detail-grid">
+                    <div className="detail-item">
+                      <span className="detail-label">ERP Stored Limit</span>
                       <span className="detail-value">₹{activeBusiness.credit.creditLimit.toLocaleString()}</span>
                     </div>
                     <div className="detail-item">
-                      <span className="detail-label">Credit Period</span>
+                      <span className="detail-label">ERP Credit Days</span>
                       <span className="detail-value">{activeBusiness.credit.creditDays} Days</span>
                     </div>
                     <div className="detail-item">
@@ -344,10 +440,8 @@ export default function Business360Page() {
                       <span className="detail-value">{activeBusiness.credit.limitType || 'Standard'}</span>
                     </div>
                     <div className="detail-item">
-                      <span className="detail-label">Current Outstanding</span>
-                      <span className="detail-value" style={{ color: '#34d399', fontWeight: 700 }}>
-                        ₹{Math.round(activeBusiness.currentOutstanding || 0).toLocaleString()}
-                      </span>
+                      <span className="detail-label">Months of Sales History</span>
+                      <span className="detail-value">{activeBusiness.credit.monthsOfHistory || 0} Months</span>
                     </div>
                   </div>
                 </div>
