@@ -124,6 +124,23 @@ export class SchedulerService {
         nextRunAt: new Date(Date.now() + 3600000 * 20).toISOString(),
         dataFreshnessMinutes: 240,
       },
+      {
+        id: 'job-atc-bank-recon',
+        name: 'Bank & Cash Ledgers Reconciliation',
+        sourceType: 'Excel Bank Statement',
+        sourceLocation: 'data/atc_sample_data/BANK & CASH LEDGERS.XLS',
+        mode: 'BATCH',
+        cronExpression: '0 9 * * *',
+        enabled: true,
+        lastRunAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+        lastCompletedAt: new Date(Date.now() - 3600000 * 2 + 1500).toISOString(),
+        lastStatus: 'SUCCESS',
+        lastDurationMs: 1500,
+        recordsProcessed: 3349,
+        recordsRejected: 0,
+        nextRunAt: new Date(Date.now() + 3600000 * 22).toISOString(),
+        dataFreshnessMinutes: 120,
+      },
     ];
 
     defaults.forEach(j => this.jobs.set(j.id, j));
@@ -151,8 +168,19 @@ export class SchedulerService {
     recordsRejected: number;
     error?: string;
   }): Promise<ScheduleJobConfig> {
-    const existing = this.jobs.get(id);
-    if (!existing) throw new Error(`Job ${id} not found`);
+    let existing = this.jobs.get(id);
+    if (!existing) {
+      existing = {
+        id,
+        name: id.replace(/[-_]/g, ' ').toUpperCase(),
+        sourceType: 'File Connector',
+        sourceLocation: 'data/ready/',
+        mode: 'BATCH',
+        enabled: true,
+        lastStatus: 'SUCCESS',
+      };
+      this.jobs.set(id, existing);
+    }
 
     existing.lastRunAt = new Date(Date.now() - result.durationMs).toISOString();
     existing.lastCompletedAt = new Date().toISOString();

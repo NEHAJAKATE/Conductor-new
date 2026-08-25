@@ -191,9 +191,30 @@ export default function IngestionPage() {
   const [workflowId, setWorkflowId] = useState<string>('');
   const [isConfirming, setIsConfirming] = useState(false);
   const [logsFilter, setLogsFilter] = useState<string>('all');
+  const [rejectedData, setRejectedData] = useState<{ total: number; rows: any[] }>({ total: 0, rows: [] });
+  const [isRejectedModalOpen, setIsRejectedModalOpen] = useState(false);
 
   const terminalEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const fetchRejectedData = async () => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('conductor_session_token') : null;
+      const res = await fetch('/api/v1/ingestion/rejected', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setRejectedData(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch rejected data:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchRejectedData();
+  }, [workflow?.status]);
 
   useEffect(() => {
     terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -291,12 +312,12 @@ export default function IngestionPage() {
     }, 150);
   };
 
-  const uploadFile = async () => {
+  const uploadFile = async (): Promise<string | null> => {
     const filesToUpload = selectedConnector === 'folder' && folderFiles.length > 0
       ? folderFiles.filter(f => f.checked && f.fileObject).map(f => f.fileObject!)
       : [file].filter(Boolean) as File[];
 
-    if (filesToUpload.length === 0) return;
+    if (filesToUpload.length === 0) return null;
 
     setIsUploading(true);
     setUploadProgress(10);
@@ -338,22 +359,29 @@ export default function IngestionPage() {
       setUploadProgress(100);
       setUploadedPath(lastUploadedPath);
       setIsUploading(false);
+      return lastUploadedPath;
     } catch (error) {
       console.error(error);
       setIsUploading(false);
       alert('Upload failed: ' + (error as Error).message);
+      return null;
     }
   };
 
   const startWorkflow = async () => {
-    if (!uploadedPath) return;
+    let targetPath = uploadedPath;
+    if (!targetPath) {
+      targetPath = (await uploadFile()) || '';
+      if (!targetPath) return;
+    }
 
+    setIsUploading(true);
     try {
       const response = await fetch('/api/v1/workflows', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          filePath: uploadedPath,
+          filePath: targetPath,
           fileName: file?.name || 'uploaded_data.csv',
           connectionName: 'CSV Ingestion Platform',
           connectorType: selectedConnector,
@@ -363,13 +391,18 @@ export default function IngestionPage() {
         }),
       });
 
-      if (!response.ok) throw new Error('Start workflow failed');
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        throw new Error(errJson.message || 'Start workflow failed');
+      }
       const data = await response.json() as WorkflowEntity;
       setWorkflow(data);
       setWorkflowId(data.id);
     } catch (error) {
       console.error(error);
       alert('Failed to start ingestion workflow: ' + (error as Error).message);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -610,6 +643,32 @@ export default function IngestionPage() {
                   </div>
                 </section>
               )}
+
+              {/* Ingestion Rejection Audit Bar */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                background: (rejectedData.total > 0) ? 'rgba(239, 68, 68, 0.08)' : 'rgba(52, 211, 153, 0.08)',
+                border: `1px solid ${(rejectedData.total > 0) ? 'rgba(239, 68, 68, 0.3)' : 'rgba(52, 211, 153, 0.3)'}`,
+                borderRadius: '8px',
+                padding: '12px 18px',
+                marginBottom: '20px',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <AlertTriangle size={18} color={rejectedData.total > 0 ? '#f87171' : '#34d399'} />
+                  <span style={{ fontSize: '13px', color: 'var(--text-loud)' }}>
+                    <strong>Ingestion Audit & Rejection Log:</strong> {rejectedData.total} quarantined records tracked with specific failure reasons
+                  </span>
+                </div>
+                <button 
+                  className="btn-outline" 
+                  onClick={() => setIsRejectedModalOpen(true)}
+                  style={{ fontSize: '12px', padding: '4px 14px', height: '32px' }}
+                >
+                  View Rejected Details ({rejectedData.total})
+                </button>
+              </div>
 
               {/* Upload Panel / Success Panel */}
               <section className="card-panel">
@@ -889,9 +948,9 @@ export default function IngestionPage() {
                         <button 
                           className="btn-primary" 
                           onClick={startWorkflow} 
-                          disabled={!uploadedPath || !!workflow}
+                          disabled={(!file && folderFiles.length === 0 && !uploadedPath) || isUploading || (!!workflow && workflow.status === 'running')}
                         >
-                          Create Connection
+                          {isUploading ? 'Connecting & Ingesting...' : 'Create Connection'}
                         </button>
                       </div>
                     </div>
@@ -1153,6 +1212,65 @@ export default function IngestionPage() {
           <span>HELP CENTER</span>
         </button>
       )}
+
+      {/* Rejection Log Details Modal */}
+      {isRejectedModalOpen && (
+        <div className="modal-backdrop" onClick={() => setIsRejectedModalOpen(false)}>
+          <div className="modal-content" style={{ maxWidth: '960px', maxHeight: '85vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <AlertTriangle size={20} color="#f87171" />
+                  <span>Quarantined & Rejected Ingestion Records</span>
+                </h3>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8' }}>
+                  Auditable log of records rejected during ingestion with row indices and specific failure reasons.
+                </p>
+              </div>
+              <button 
+                onClick={() => setIsRejectedModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: '16px' }}>
+              {rejectedData.rows.length === 0 ? (
+                <p style={{ color: '#94a3b8', textAlign: 'center', padding: '2rem' }}>No rejected records currently logged.</p>
+              ) : (
+                <div className="table-wrapper" style={{ maxHeight: '55vh', overflowY: 'auto' }}>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Row #</th>
+                        <th>Source File</th>
+                        <th>Failure Reason</th>
+                        <th>Raw Content Payload</th>
+                        <th>Timestamp</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rejectedData.rows.map((row, idx) => (
+                        <tr key={idx}>
+                          <td style={{ fontWeight: 'bold', color: '#f87171' }}>#{row.rowNumber}</td>
+                          <td style={{ fontSize: '12px', color: '#60a5fa' }}>{row.sourceFile}</td>
+                          <td style={{ fontSize: '12px', color: '#fbbf24', maxWidth: '260px' }}>{row.reason}</td>
+                          <td style={{ fontSize: '11px', fontFamily: 'monospace', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {typeof row.rawContent === 'object' ? JSON.stringify(row.rawContent) : String(row.rawContent)}
+                          </td>
+                          <td style={{ fontSize: '11px', color: '#94a3b8' }}>{new Date(row.rejectedAt).toLocaleTimeString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

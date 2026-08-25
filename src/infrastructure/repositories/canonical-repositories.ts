@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import {
   TransactionEntity,
   InventoryEntity,
@@ -6,11 +8,49 @@ import {
   ProductEntity,
 } from '@/core/domain/canonical-models';
 
+const READY_DIR = path.resolve(process.cwd(), 'data', 'ready');
+
+function ensureReadyDir() {
+  try {
+    if (!fs.existsSync(READY_DIR)) {
+      fs.mkdirSync(READY_DIR, { recursive: true });
+    }
+  } catch (err) {
+    console.error('[Repositories] Failed to create data/ready dir:', err);
+  }
+}
+
 export class TransactionRepository {
   private transactions: TransactionEntity[] = [];
+  private filePath = path.join(READY_DIR, 'transactions.json');
+
+  constructor() {
+    this.loadFromDisk();
+  }
+
+  private loadFromDisk() {
+    try {
+      if (fs.existsSync(this.filePath)) {
+        const raw = fs.readFileSync(this.filePath, 'utf8');
+        this.transactions = JSON.parse(raw);
+      }
+    } catch (err) {
+      console.error('[TransactionRepository] Failed to load from disk:', err);
+    }
+  }
+
+  private async persistToDisk() {
+    try {
+      ensureReadyDir();
+      await fs.promises.writeFile(this.filePath, JSON.stringify(this.transactions, null, 2), 'utf8');
+    } catch (err) {
+      console.error('[TransactionRepository] Failed to persist to disk:', err);
+    }
+  }
 
   async saveBatch(txs: TransactionEntity[]): Promise<number> {
     this.transactions.push(...txs);
+    await this.persistToDisk();
     return txs.length;
   }
 
@@ -63,16 +103,45 @@ export class TransactionRepository {
 
   async clear(): Promise<void> {
     this.transactions = [];
+    await this.persistToDisk();
   }
 }
 
 export class InventoryRepository {
   private inventory = new Map<string, InventoryEntity>();
+  private filePath = path.join(READY_DIR, 'inventory.json');
+
+  constructor() {
+    this.loadFromDisk();
+  }
+
+  private loadFromDisk() {
+    try {
+      if (fs.existsSync(this.filePath)) {
+        const raw = fs.readFileSync(this.filePath, 'utf8');
+        const list: InventoryEntity[] = JSON.parse(raw);
+        list.forEach(item => this.inventory.set(item.productId, item));
+      }
+    } catch (err) {
+      console.error('[InventoryRepository] Failed to load from disk:', err);
+    }
+  }
+
+  private async persistToDisk() {
+    try {
+      ensureReadyDir();
+      const list = Array.from(this.inventory.values());
+      await fs.promises.writeFile(this.filePath, JSON.stringify(list, null, 2), 'utf8');
+    } catch (err) {
+      console.error('[InventoryRepository] Failed to persist to disk:', err);
+    }
+  }
 
   async saveBatch(items: InventoryEntity[]): Promise<number> {
     items.forEach(item => {
       this.inventory.set(item.productId, item);
     });
+    await this.persistToDisk();
     return items.length;
   }
 
@@ -93,16 +162,45 @@ export class InventoryRepository {
 
   async clear(): Promise<void> {
     this.inventory.clear();
+    await this.persistToDisk();
   }
 }
 
 export class OutstandingRepository {
   private outstandings = new Map<string, OutstandingEntity>();
+  private filePath = path.join(READY_DIR, 'outstanding.json');
+
+  constructor() {
+    this.loadFromDisk();
+  }
+
+  private loadFromDisk() {
+    try {
+      if (fs.existsSync(this.filePath)) {
+        const raw = fs.readFileSync(this.filePath, 'utf8');
+        const list: OutstandingEntity[] = JSON.parse(raw);
+        list.forEach(item => this.outstandings.set(item.businessId, item));
+      }
+    } catch (err) {
+      console.error('[OutstandingRepository] Failed to load from disk:', err);
+    }
+  }
+
+  private async persistToDisk() {
+    try {
+      ensureReadyDir();
+      const list = Array.from(this.outstandings.values());
+      await fs.promises.writeFile(this.filePath, JSON.stringify(list, null, 2), 'utf8');
+    } catch (err) {
+      console.error('[OutstandingRepository] Failed to persist to disk:', err);
+    }
+  }
 
   async saveBatch(items: OutstandingEntity[]): Promise<number> {
     items.forEach(item => {
       this.outstandings.set(item.businessId, item);
     });
+    await this.persistToDisk();
     return items.length;
   }
 
@@ -113,39 +211,47 @@ export class OutstandingRepository {
     }
     if (filters?.search) {
       const q = filters.search.toLowerCase().trim();
-      result = result.filter(o => 
-        o.businessName.toLowerCase().includes(q) ||
-        (o.gstin && o.gstin.toLowerCase().includes(q))
-      );
+      result = result.filter(o => o.businessName.toLowerCase().includes(q));
     }
-    return result.sort((a, b) => b.totalOutstanding - a.totalOutstanding);
+    return result;
   }
 
-  async findByBusinessId(id: string): Promise<OutstandingEntity | undefined> {
-    return this.outstandings.get(id);
+  async findByBusinessId(businessId: string): Promise<OutstandingEntity | undefined> {
+    const direct = this.outstandings.get(businessId);
+    if (direct) return direct;
+
+    // Fallback: Match by normalized business name if ID prefix differs
+    const clean = businessId.replace(/^(party|gst|pan|erp):/i, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    for (const out of this.outstandings.values()) {
+      const outClean = out.businessName.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (outClean === clean) return out;
+    }
+    return undefined;
   }
 
   async clear(): Promise<void> {
     this.outstandings.clear();
+    await this.persistToDisk();
   }
 }
 
+// Global Singletons
 declare global {
-  var __transactionRepositoryInstance__: TransactionRepository | undefined;
-  var __inventoryRepositoryInstance__: InventoryRepository | undefined;
-  var __outstandingRepositoryInstance__: OutstandingRepository | undefined;
+  var __txRepoInstance__: TransactionRepository | undefined;
+  var __invRepoInstance__: InventoryRepository | undefined;
+  var __outRepoInstance__: OutstandingRepository | undefined;
 }
 
-if (!globalThis.__transactionRepositoryInstance__) {
-  globalThis.__transactionRepositoryInstance__ = new TransactionRepository();
+if (!globalThis.__txRepoInstance__) {
+  globalThis.__txRepoInstance__ = new TransactionRepository();
 }
-if (!globalThis.__inventoryRepositoryInstance__) {
-  globalThis.__inventoryRepositoryInstance__ = new InventoryRepository();
+if (!globalThis.__invRepoInstance__) {
+  globalThis.__invRepoInstance__ = new InventoryRepository();
 }
-if (!globalThis.__outstandingRepositoryInstance__) {
-  globalThis.__outstandingRepositoryInstance__ = new OutstandingRepository();
+if (!globalThis.__outRepoInstance__) {
+  globalThis.__outRepoInstance__ = new OutstandingRepository();
 }
 
-export const transactionRepository = globalThis.__transactionRepositoryInstance__;
-export const inventoryRepository = globalThis.__inventoryRepositoryInstance__;
-export const outstandingRepository = globalThis.__outstandingRepositoryInstance__;
+export const transactionRepository = globalThis.__txRepoInstance__;
+export const inventoryRepository = globalThis.__invRepoInstance__;
+export const outstandingRepository = globalThis.__outRepoInstance__;

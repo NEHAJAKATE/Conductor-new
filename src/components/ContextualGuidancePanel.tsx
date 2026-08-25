@@ -5,15 +5,10 @@ import {
   Sparkles, 
   ChevronRight, 
   ChevronLeft, 
-  Info, 
   Clock, 
-  CheckCircle2, 
-  AlertTriangle, 
-  ArrowRight,
-  ShieldCheck,
-  Zap,
-  TrendingUp,
-  Database
+  ShieldCheck, 
+  Zap, 
+  ArrowRight 
 } from 'lucide-react';
 import Link from 'next/link';
 import './guidance-panel.css';
@@ -55,8 +50,7 @@ export default function ContextualGuidancePanel() {
   }, [pathname]);
 
   const getGuidanceForRoute = (path: string): ContextGuidance => {
-    const isNotConnected = liveReport?.status === 'NOT_CONNECTED';
-    const isLoaded = liveReport?.status === 'LOADED';
+    const isNotConnected = !liveReport || liveReport?.status === 'NOT_CONNECTED';
 
     switch (path) {
       case '/business360':
@@ -80,7 +74,7 @@ export default function ContextualGuidancePanel() {
           whatIsHappening: 'Viewing unified organization directory of B2B chemist dealers, hospitals, clinics, and trade suppliers.',
           source: liveReport?.provenance?.sourceSystem || 'Marg ERP Party Master & Ledger Sync',
           freshness: liveReport?.provenance?.freshness || 'Verified canonical directory',
-          fact: `${liveReport?.kpis?.[0]?.formattedValue || '2,696'} unified trade profiles indexed with ${liveReport?.kpis?.[1]?.formattedValue || '1,172'} tax-verified GSTIN registrations.`,
+          fact: `${liveReport?.kpis?.[0]?.formattedValue || '0'} trade profiles indexed with ${liveReport?.kpis?.[1]?.formattedValue || '0'} tax-verified GSTIN registrations.`,
           calculation: liveReport?.reconciliation?.formula || 'Entity Resolution: Matching on GSTIN, PAN, Drug License, and normalized trade name.',
           recommendation: 'Verify trade tax identifiers for unregistered parties before granting expanded credit limits.',
           nextSteps: [
@@ -95,12 +89,12 @@ export default function ContextualGuidancePanel() {
           whatIsHappening: 'Viewing person-centric profiles, deterministic identity stitching, and dynamic audience segments.',
           source: 'Customer Data Platform & Identity Stream',
           freshness: 'Real-time deterministic stitching active',
-          fact: '1,000+ customer profiles resolved using deterministic UUIDv5 identity anchors (Phone, Email, PAN).',
+          fact: 'Customer profiles resolved using deterministic UUIDv5 identity anchors (Phone, Email, PAN).',
           calculation: 'High confidence matching applied with strict multi-identifier validation.',
           recommendation: 'Review unmerged anonymous visitors before launching targeted marketing campaigns.',
           nextSteps: [
-            { label: 'View Destinations', href: '/destinations' },
-            { label: 'Inspect Marketing Segments', href: '/marketing' }
+            { label: 'View Integrations', href: '/integrations' },
+            { label: 'Inspect Automations', href: '/workflows' }
           ]
         };
 
@@ -112,7 +106,7 @@ export default function ContextualGuidancePanel() {
             source: 'No Sales Dataset Connected',
             freshness: 'Awaiting Ingestion',
             fact: '0 sales records exist in canonical transaction storage.',
-            calculation: 'Metrics require sales journal vouchers (e.g. date_wise_sale.csv).',
+            calculation: 'Metrics require sales journal vouchers (e.g. date_wise_sale_&_purchase_analysis.csv).',
             recommendation: 'Ingest your sales analysis CSV or connect ERP to view real-time revenue and GST.',
             nextSteps: [
               { label: 'Upload Sales Dataset', href: '/ingestion' },
@@ -123,14 +117,14 @@ export default function ContextualGuidancePanel() {
         return {
           title: 'Sales Intelligence Assistant',
           whatIsHappening: 'Analyzing sales transaction journals, output GST taxes, and dealer dispatch volumes.',
-          source: liveReport?.provenance?.sourceSystem || 'Marg ERP Sales Journal (date_wise_sale.csv)',
+          source: liveReport?.provenance?.sourceSystem || 'Marg ERP Sales Journal (date_wise_sale_&_purchase_analysis.csv)',
           freshness: liveReport?.provenance?.freshness || 'Synchronized with canonical transaction store',
-          fact: `${liveReport?.kpis?.[0]?.formattedValue || '₹985.74 Lakh'} total net sales across ${liveReport?.kpis?.[0]?.subtext || 'invoices'} with ${liveReport?.kpis?.[1]?.formattedValue || '₹57.57 Lakh'} Output GST.`,
+          fact: `${liveReport?.kpis?.[0]?.formattedValue || '₹0'} total net sales across ${liveReport?.kpis?.[0]?.subtext || 'invoices'} with ${liveReport?.kpis?.[1]?.formattedValue || '₹0'} Output GST.`,
           calculation: liveReport?.reconciliation?.formula || 'Total Net Sales (Taxable) + Output GST = Gross Sales Invoice Value',
           recommendation: 'Prioritize inventory replenishments for high-frequency pharmaceutical formulations.',
           nextSteps: [
             { label: 'Review Warehouse Stock', href: '/inventory' },
-            { label: 'Inspect Generic Reports', href: '/reports' }
+            { label: 'Inspect Custom Reports', href: '/reports' }
           ]
         };
 
@@ -142,7 +136,7 @@ export default function ContextualGuidancePanel() {
             source: 'No Purchase Dataset Connected',
             freshness: 'Awaiting Ingestion',
             fact: '0 purchase records exist in canonical transaction storage.',
-            calculation: 'Metrics require purchase analysis vouchers (e.g. date_wise_purchase.csv).',
+            calculation: 'Metrics require purchase analysis vouchers (e.g. date_wise_sale_&_purchase_analysis.csv).',
             recommendation: 'Ingest your purchase analysis CSV to track procurement spend and Input Tax Credit (ITC).',
             nextSteps: [
               { label: 'Upload Purchase Dataset', href: '/ingestion' },
@@ -155,7 +149,7 @@ export default function ContextualGuidancePanel() {
           whatIsHappening: 'Tracking procurement spend, pharmaceutical suppliers, and Input Tax Credit (ITC) reconciliation.',
           source: liveReport?.provenance?.sourceSystem || 'Marg ERP Purchase Ledger',
           freshness: liveReport?.provenance?.freshness || 'Synchronized with canonical transaction store',
-          fact: `${liveReport?.kpis?.[0]?.formattedValue || '₹938.24 Lakh'} net procurement spend across ${liveReport?.kpis?.[2]?.formattedValue || '169'} manufacturers with ${liveReport?.kpis?.[1]?.formattedValue || '₹54.58 Lakh'} Input GST credit.`,
+          fact: `${liveReport?.kpis?.[0]?.formattedValue || '₹0'} net procurement spend across ${liveReport?.kpis?.[2]?.formattedValue || '0'} manufacturers with ${liveReport?.kpis?.[1]?.formattedValue || '₹0'} Input GST credit.`,
           calculation: liveReport?.reconciliation?.formula || 'Net Procurement (Taxable) + Input GST (ITC) = Gross Purchase Bill Value',
           recommendation: 'Reconcile purchase invoices against supplier GSTR-2B filing before finalizing monthly tax liability.',
           nextSteps: [
@@ -167,12 +161,12 @@ export default function ContextualGuidancePanel() {
       case '/outstanding':
         if (isNotConnected) {
           return {
-            title: 'Ageing & Receivables Assistant',
-            whatIsHappening: 'Receivables ledger is awaiting outstanding aging data ingestion.',
+            title: 'Receivables & Ageing Assistant',
+            whatIsHappening: 'Receivables ledger is awaiting outstanding monthly balance snapshot ingestion.',
             source: 'No Outstanding Dataset Connected',
             freshness: 'Awaiting Ingestion',
             fact: '0 outstanding accounts exist in canonical receivables store.',
-            calculation: 'Metrics require OUTSTANDING.xls or receivables aging balance sheet.',
+            calculation: 'Metrics require OUTSTANDING LEDGER.XLS balance sheet.',
             recommendation: 'Ingest your outstanding ledger CSV to evaluate credit risk and dispatch payment reminders.',
             nextSteps: [
               { label: 'Upload Outstanding Ledger', href: '/ingestion' },
@@ -181,16 +175,16 @@ export default function ContextualGuidancePanel() {
           };
         }
         return {
-          title: 'Ageing & Receivables Assistant',
-          whatIsHappening: 'Monitoring 30-day interval receivables aging buckets, credit limits, and overdue risk tiers.',
-          source: liveReport?.provenance?.sourceSystem || 'Marg ERP Outstanding Ledger (OUTSTANDING.xls)',
+          title: 'Receivables & Ageing Assistant',
+          whatIsHappening: 'Monitoring monthly snapshot balance trend, credit limits, and overdue risk tiers.',
+          source: liveReport?.provenance?.sourceSystem || 'Marg ERP Monthly Outstanding Ledger (Snapshot Analysis)',
           freshness: liveReport?.provenance?.freshness || 'Synchronized with canonical ledger store',
-          fact: `${liveReport?.kpis?.[0]?.formattedValue || '₹142.15 Lakh'} total receivables across ${liveReport?.totalRows || 630} accounts (${liveReport?.kpis?.[1]?.formattedValue || '₹60.40 Lakh'} overdue >90 days).`,
-          calculation: liveReport?.reconciliation?.formula || 'Total Receivables = Sum of positive 0-30D + 31-60D + 61-90D + >90D aging buckets',
+          fact: `${liveReport?.kpis?.[0]?.formattedValue || '₹0'} total receivables across ${liveReport?.totalRows || 0} accounts (${liveReport?.kpis?.[1]?.formattedValue || '₹0'} in older snapshot buckets).`,
+          calculation: liveReport?.reconciliation?.formula || 'Total Receivables = Sum of 0-30D (Mar) + 31-60D (Feb) + 61-90D (Jan) + >90D (Dec & Older) snapshot columns',
           recommendation: 'Dispatch 1-click automated payment reminders for accounts exceeding their credit limit.',
           nextSteps: [
             { label: 'View Trigger Automations', href: '/workflows' },
-            { label: 'Open Business 360', href: '/business360' }
+            { label: 'Open B2B Directory', href: '/business360' }
           ]
         };
 
@@ -202,8 +196,8 @@ export default function ContextualGuidancePanel() {
             source: 'No Inventory Dataset Connected',
             freshness: 'Awaiting Ingestion',
             fact: '0 SKU stock records exist in canonical inventory storage.',
-            calculation: 'Metrics require OPENING STOCK.XLS or warehouse balance feeds.',
-            recommendation: 'Ingest opening stock CSV to track SKU quantities on hand and reorder alerts.',
+            calculation: 'Metrics require OPENING STOCK.XLS and transaction ledger.',
+            recommendation: 'Ingest opening stock and journal to compute live closing stock and reorder alerts.',
             nextSteps: [
               { label: 'Upload Stock Sheet', href: '/ingestion' },
               { label: 'View Purchase Trends', href: '/purchases' }
@@ -212,15 +206,30 @@ export default function ContextualGuidancePanel() {
         }
         return {
           title: 'Inventory & Stock Assistant',
-          whatIsHappening: 'Tracking physical warehouse stock on hand, pharmaceutical SKU availability, and reorder warnings.',
-          source: liveReport?.provenance?.sourceSystem || 'Marg ERP Opening Inventory (OPENING STOCK.XLS)',
-          freshness: liveReport?.provenance?.freshness || 'Verified warehouse balance',
-          fact: `${liveReport?.kpis?.[1]?.formattedValue || '3,07,012'} physical units on hand across ${liveReport?.kpis?.[0]?.formattedValue || '3,947'} SKUs with ${liveReport?.kpis?.[2]?.formattedValue || '0'} reorder alerts.`,
-          calculation: liveReport?.reconciliation?.formula || 'Stock on Hand = Current Physical SKU Inventory Count',
-          recommendation: 'Create procurement purchase orders for essential formulations running below safety threshold.',
+          whatIsHappening: 'Tracking real-time running SKU inventory ledger, warehouse stock on hand, and reorder warnings.',
+          source: liveReport?.provenance?.sourceSystem || 'Marg ERP Inventory Ledger & Transaction Stream',
+          freshness: liveReport?.provenance?.freshness || 'Real-time computed closing balance',
+          fact: `${liveReport?.kpis?.[1]?.formattedValue || '0'} physical units on hand across ${liveReport?.kpis?.[0]?.formattedValue || '0'} SKUs with ${liveReport?.kpis?.[2]?.formattedValue || '0'} low-stock alerts.`,
+          calculation: liveReport?.reconciliation?.formula || 'Closing Stock = Opening + Purchases + Sales Returns - Sales - Purchase Returns - Breakage ± Adjustments',
+          recommendation: 'Create procurement purchase orders for essential formulations running at or below 25-strip threshold.',
           nextSteps: [
-            { label: 'View Purchase Trends', href: '/purchases' },
-            { label: 'Open Generic Reports', href: '/reports' }
+            { label: 'View Purchase Spend', href: '/purchases' },
+            { label: 'Open Custom Reports', href: '/reports' }
+          ]
+        };
+
+      case '/reconciliation':
+        return {
+          title: 'Bank & Cash Reconciliation Assistant',
+          whatIsHappening: 'Automated 4-rule matching between Bank Statements (BANK & CASH LEDGERS.XLS) and ERP Journal Vouchers.',
+          source: 'Axis Bank, ICICI Bank, HDFC, SBI, PNB, Canara, Cash in Hand',
+          freshness: 'Synchronized with 86,784 canonical ERP vouchers',
+          fact: '4-rule matching classifies entries as MATCHED, UNMATCHED_BANK, AMOUNT_MISMATCH, or DATE_MISMATCH.',
+          calculation: 'Reference exact match -> Party & Amount candidate match -> Amount-only match -> Discrepancy flagging.',
+          recommendation: 'Inspect amount mismatch entries where bank charges or cash discounts created variance.',
+          nextSteps: [
+            { label: 'View Sales Vouchers', href: '/sales' },
+            { label: 'View Purchase Spend', href: '/purchases' }
           ]
         };
 
@@ -262,9 +271,9 @@ export default function ContextualGuidancePanel() {
           freshness: 'System Healthy & All Services Operational',
           fact: 'Unified Business 360 and Customer 360 layers active with deterministic reconciliation.',
           calculation: 'Zero LLM fabrication on accounting or financial calculations.',
-          recommendation: 'Navigate to Business 360 or Sales to inspect live unified enterprise intelligence.',
+          recommendation: 'Navigate to B2B Directory or Sales to inspect live unified enterprise intelligence.',
           nextSteps: [
-            { label: 'Open Business 360', href: '/business360' },
+            { label: 'Open B2B Directory', href: '/business360' },
             { label: 'Open Sales Intelligence', href: '/sales' }
           ]
         };

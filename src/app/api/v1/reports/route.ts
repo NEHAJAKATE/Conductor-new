@@ -1,17 +1,12 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { bootstrap } from '@/core/services/bootstrap';
 import { ReportService, ReportQueryParams } from '@/core/reports/report.service';
-import { AtcIngestRunner } from '@/core/services/atc-ingest-runner';
 
 export async function GET(request: NextRequest) {
   try {
     const context = bootstrap();
     
-    // Ensure dataset is loaded if empty
-    const txCount = await context.transactionRepository.list({ limit: 1 });
-    if (txCount.total === 0) {
-      await AtcIngestRunner.runFullAtcIngestion();
-    }
+    // No auto-ingest backdoor: reports must only reflect ingested data
 
     const searchParams = request.nextUrl.searchParams;
     const dataset = (searchParams.get('dataset') || 'sales') as any;

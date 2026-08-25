@@ -113,23 +113,52 @@ export class CanonicalMappingService {
   }
 
   /**
+   * Generates deterministic canonical business ID with priority:
+   * gst:<gstin> -> pan:<pan> -> erp:<erpCode> -> party:<normalized_name>
+   */
+  static buildCanonicalBusinessId(params: {
+    gstin?: string;
+    pan?: string;
+    erpCode?: string;
+    name?: string;
+  }): string {
+    const gstin = String(params.gstin || '').trim();
+    const pan = String(params.pan || '').toUpperCase().trim();
+    const erpCode = String(params.erpCode || '').trim();
+    const cleanName = String(params.name || 'Unnamed Party').replace(/\s+/g, ' ').trim();
+
+    if (gstin && gstin.length >= 10) {
+      return `gst:${gstin}`;
+    }
+    if (pan && pan.length >= 10) {
+      return `pan:${pan}`;
+    }
+    if (erpCode) {
+      return `erp:${erpCode}`;
+    }
+    return `party:${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+  }
+
+  /**
    * Maps Marg ERP partyMaster record to BusinessEntity
    */
   static mapPartyMasterToBusiness(raw: Record<string, any>): BusinessEntity {
     const gstin = String(raw.tin || raw.PTGSTNO || raw.gstin || '').trim();
     const pan = String(raw.panno || raw.ITPANNO || raw.pan || '').toUpperCase().trim();
-    const rawName = String(raw.name || raw.ledger || raw.PNAME || 'Unnamed Party').trim();
-    const cleanName = rawName.replace(/\s+/g, ' ');
+    const rawLedger = raw.ledger ? String(raw.ledger).replace(/\s+/g, ' ').trim() : undefined;
+    const rawName = raw.name 
+      ? String(raw.name).replace(/\s+/g, ' ').trim() 
+      : rawLedger || String(raw.PNAME || 'Unnamed Party').replace(/\s+/g, ' ').trim();
+    const cleanName = rawName;
     const erpCode = String(raw.code || '').trim();
 
-    // Canonical Anchor ID
-    const canonicalId = gstin && gstin.length >= 10 
-      ? `gst:${gstin}` 
-      : pan && pan.length >= 10 
-        ? `pan:${pan}` 
-        : erpCode 
-          ? `erp:${erpCode}` 
-          : `party:${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+    // Canonical Anchor ID using priority: gst -> pan -> erp -> name fallback
+    const canonicalId = CanonicalMappingService.buildCanonicalBusinessId({
+      gstin,
+      pan,
+      erpCode,
+      name: cleanName,
+    });
 
     const licenses = raw.licence 
       ? String(raw.licence).split(',').map(l => l.trim()).filter(Boolean) 
@@ -139,13 +168,14 @@ export class CanonicalMappingService {
       gstin,
       drugLicense: raw.licence,
       group: raw.group,
-      name: rawName,
+      name: cleanName,
     });
 
     return {
       id: canonicalId,
       name: cleanName,
       legalName: String(raw.ledger || cleanName).replace(/\s+/g, ' ').trim(),
+      ledgerName: rawLedger,
       erpCode: erpCode || undefined,
       taxId: gstin.length >= 10 ? gstin : undefined,
       pan: pan.length >= 10 ? pan : undefined,
@@ -205,21 +235,22 @@ export class CanonicalMappingService {
     const gstin = String(raw.PTGSTNO || raw.gstin || '').trim();
     const pan = String(raw.ITPANNO || raw.pan || '').trim();
 
-    const partyId = gstin && gstin.length >= 10 
-      ? `gst:${gstin}` 
-      : pan && pan.length >= 10 
-        ? `pan:${pan}` 
-        : `party:${partyName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+    const partyId = CanonicalMappingService.buildCanonicalBusinessId({
+      gstin,
+      pan,
+      name: partyName,
+    });
 
     const productName = String(raw.NAME || raw.productName || 'Unnamed Product').replace(/\s+/g, ' ').trim();
-    const qty = parseFloat(raw.QTY || raw.quantity) || 0;
-    const freeQty = parseFloat(raw.FREE || raw.freeQuantity) || 0;
-    const unitRate = parseFloat(raw.RATE || raw.rate) || 0;
-    const netAmount = parseFloat(raw.AMOUNT || raw.amount) || 0;
-    const gstRate = parseFloat(raw.GST || raw.taxRate) || 0;
-    const taxAmount = parseFloat(raw.TAXAMT || raw.taxAmount) || 0;
-    const mrp = parseFloat(raw.MRP || raw.mrp) || 0;
-    const mrpAmount = parseFloat(raw.MRPAMT || raw.mrpAmount) || (mrp * qty);
+    const qty = Math.abs(parseFloat(raw.QTY || raw.quantity) || 0);
+    const freeQty = Math.abs(parseFloat(raw.FREE || raw.freeQuantity) || 0);
+    const unitRate = Math.abs(parseFloat(raw.RATE || raw.rate) || 0);
+    const rawAmount = parseFloat(raw.AMOUNT || raw.amount) || 0;
+    const netAmount = (type === 'sale_return' || type === 'purchase_return') ? Math.abs(rawAmount) : rawAmount;
+    const gstRate = Math.abs(parseFloat(raw.GST || raw.taxRate) || 0);
+    const taxAmount = Math.abs(parseFloat(raw.TAXAMT || raw.taxAmount) || 0);
+    const mrp = Math.abs(parseFloat(raw.MRP || raw.mrp) || 0);
+    const mrpAmount = Math.abs(parseFloat(raw.MRPAMT || raw.mrpAmount) || (mrp * qty));
 
     const lineItem = {
       productId: `prod:${productName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
@@ -229,8 +260,8 @@ export class CanonicalMappingService {
       quantity: qty,
       freeQuantity: freeQty,
       unitRate,
-      schemeAmount: parseFloat(raw.SCHMAMT) || 0,
-      discountAmount: parseFloat(raw.DISCOUNT) || 0,
+      schemeAmount: Math.abs(parseFloat(raw.SCHMAMT) || 0),
+      discountAmount: Math.abs(parseFloat(raw.DISCOUNT) || 0),
       netAmount,
       gstRate,
       taxAmount,
@@ -260,42 +291,110 @@ export class CanonicalMappingService {
   }
 
   /**
+   * Checks if an account description matches non-customer internal adjustment/accounting accounts
+   */
+  static isInternalAccount(description: string): boolean {
+    const patterns = [
+      /SUSPENCE/i,
+      /SUSPENSE/i,
+      /STOCK SHORTAGE/i,
+      /ROUND OFF/i,
+      /ROUND-OFF/i,
+      /ROUNDOFF/i,
+      /DISCOUNT/i,
+      /FREIGHT/i,
+    ];
+    return patterns.some(p => p.test(description));
+  }
+
+  /**
    * Maps Outstanding Ageing row into OutstandingEntity
    */
   static mapOutstandingRow(raw: Record<string, any>): OutstandingEntity | null {
-    const desc = String(raw.Description || raw.partyName || '').trim();
+    const desc = String(raw.Description || raw.partyName || raw.name || raw.ledger || raw.PNAME || '').trim();
     if (!desc || desc === 'TOTAL') return null;
 
-    const total = parseFloat(String(raw.Total || '0').replace(/\s+/g, '')) || 0;
+    const total = parseFloat(String(raw.Total || raw.total || '0').replace(/\s+/g, '')) || 0;
     
-    // Parse aging buckets
-    const bucket0_30 = parseFloat(String(raw['46235'] || raw['0-30'] || '0').replace(/\s+/g, '')) || 0;
-    const bucket31_60 = parseFloat(String(raw['46204'] || raw['31-60'] || '0').replace(/\s+/g, '')) || 0;
-    const bucket61_90 = parseFloat(String(raw['46174'] || raw['61-90'] || '0').replace(/\s+/g, '')) || 0;
-    const bucket90Plus = (
-      (parseFloat(String(raw['46143'] || '0').replace(/\s+/g, '')) || 0) +
-      (parseFloat(String(raw['46113'] || '0').replace(/\s+/g, '')) || 0) +
-      (parseFloat(String(raw['46082'] || '0').replace(/\s+/g, '')) || 0) +
-      (parseFloat(String(raw['Sep 2025\r+Older'] || raw['Older'] || '0').replace(/\s+/g, '')) || 0)
-    );
-
-    let riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' = 'LOW';
-    if (bucket90Plus > 50000 || total > 500000) riskLevel = 'CRITICAL';
-    else if (bucket90Plus > 10000 || bucket61_90 > 50000) riskLevel = 'HIGH';
-    else if (bucket31_60 > 25000) riskLevel = 'MEDIUM';
-
+    // Survey raw columns for potential GSTIN, PAN, or ERP Code fields
+    const gstin = String(raw.tin || raw.PTGSTNO || raw.gstin || raw.gst_no || raw.gstNo || raw.taxId || '').trim();
+    const pan = String(raw.panno || raw.ITPANNO || raw.pan || raw.pan_no || raw.panNo || '').toUpperCase().trim();
+    const erpCode = String(raw.code || raw.partyCode || raw.party_code || raw.ledgerCode || raw.ledger_code || raw.erpCode || '').trim();
     const cleanName = desc.replace(/\s+/g, ' ').trim();
-    const businessId = `party:${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+
+    // Canonical ID using same priority logic: gst -> pan -> erp -> name fallback
+    const businessId = CanonicalMappingService.buildCanonicalBusinessId({
+      gstin,
+      pan,
+      erpCode,
+      name: cleanName,
+    });
+
+    // Parse monthly snapshot columns from Marg ERP
+    const march2026 = parseFloat(String(raw['46235'] || raw['0-30'] || raw.march || '0').replace(/\s+/g, '')) || 0;
+    const feb2026 = parseFloat(String(raw['46204'] || raw['31-60'] || raw.february || '0').replace(/\s+/g, '')) || 0;
+    const jan2026 = parseFloat(String(raw['46174'] || raw['61-90'] || raw.january || '0').replace(/\s+/g, '')) || 0;
+    const dec2025 = parseFloat(String(raw['46143'] || raw.december || '0').replace(/\s+/g, '')) || 0;
+    const nov2025 = parseFloat(String(raw['46113'] || raw.november || '0').replace(/\s+/g, '')) || 0;
+    const oct2025 = parseFloat(String(raw['46082'] || raw.october || '0').replace(/\s+/g, '')) || 0;
+    const olderSep2025 = parseFloat(String(raw['Sep 2025\r+Older'] || raw['Older'] || raw.older || '0').replace(/\s+/g, '')) || 0;
+
+    // Standard UI Ageing Buckets (from monthly snapshot)
+    const bucket0_30 = march2026;
+    const bucket31_60 = feb2026;
+    const bucket61_90 = jan2026;
+    const bucket90Plus = dec2025 + nov2025 + oct2025 + olderSep2025;
+
+    // SOW specific buckets (30-45d, 45-60d, 60+d)
+    const bucket30_45 = Math.round(feb2026 * 0.5);
+    const bucket45_60 = Math.round(feb2026 * 0.5);
+    const bucket60Plus = bucket61_90 + bucket90Plus;
+
+    const isInternal = CanonicalMappingService.isInternalAccount(cleanName);
+    let riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' = 'LOW';
+    let riskRationale = 'Account balance is current (within standard 30-day payment cycle).';
+
+    if (isInternal) {
+      riskLevel = 'LOW';
+      riskRationale = 'Internal accounting / adjustment ledger (excluded from customer debtor risk scoring).';
+    } else if (bucket90Plus > 50000 || total > 500000) {
+      riskLevel = 'CRITICAL';
+      riskRationale = `CRITICAL: Overdue >90 days (₹${Math.round(bucket90Plus).toLocaleString()}) exceeds ₹50,000 credit threshold. Total exposure: ₹${Math.round(total).toLocaleString()}.`;
+    } else if (bucket90Plus > 10000 || bucket61_90 > 50000) {
+      riskLevel = 'HIGH';
+      riskRationale = `HIGH RISK: Overdue aging >60 days (₹${Math.round(bucket61_90 + bucket90Plus).toLocaleString()}) requires urgent payment follow-up.`;
+    } else if (bucket31_60 > 25000) {
+      riskLevel = 'MEDIUM';
+      riskRationale = `MEDIUM RISK: ₹${Math.round(bucket31_60).toLocaleString()} outstanding in 31-60 days window. Due date approaching.`;
+    }
 
     return {
       businessId,
       businessName: cleanName,
+      gstin: gstin.length >= 10 ? gstin : undefined,
+      pan: pan.length >= 10 ? pan : undefined,
       totalOutstanding: total,
+      isInternalAdjustment: isInternal ? true : undefined,
       bucket0_30,
       bucket31_60,
       bucket61_90,
       bucket90Plus,
+      bucket30_45,
+      bucket45_60,
+      bucket60Plus,
+      monthlyBreakdown: {
+        march2026,
+        feb2026,
+        jan2026,
+        dec2025,
+        nov2025,
+        oct2025,
+        olderSep2025,
+      },
       riskLevel,
+      riskRationale,
+      dataSourceType: 'monthly_snapshot',
+      notice: 'Ageing bucket calculation requires invoice-level due dates. This file provides monthly balance snapshots only.',
       groupUid: raw.groupuid ? String(raw.groupuid).trim() : undefined,
       lastUpdated: new Date().toISOString(),
     };

@@ -26,11 +26,11 @@ export async function GET(
       const field = tag.fieldName as keyof typeof cloned.identity;
       const originalValue = cloned.identity[field];
       if (originalValue !== undefined) {
-        cloned.identity[field] = privacyPolicyService.maskValue(
+        (cloned.identity as any)[field] = privacyPolicyService.maskValue(
           originalValue,
           tag.classification,
           role
-        ) as any;
+        );
       }
     });
 

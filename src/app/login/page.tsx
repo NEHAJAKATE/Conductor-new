@@ -1,5 +1,7 @@
-import React from 'react';
-import Link from 'next/link';
+"use client";
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { ShieldCheck, UserCheck, Lock, AlertCircle, ArrowRight } from 'lucide-react';
 import './login.css';
 
 const CornerCrosshairs = () => (
@@ -12,26 +14,96 @@ const CornerCrosshairs = () => (
 );
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState('owner@agrawaltrading.com');
+  const [password, setPassword] = useState('owner123');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleLogin = async (e?: React.FormEvent, customEmail?: string, customPassword?: string) => {
+    if (e) e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    const loginEmail = customEmail || email;
+    const loginPassword = customPassword || password;
+
+    try {
+      const res = await fetch('/api/v1/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.token) {
+        localStorage.setItem('conductor_session_token', data.token);
+        localStorage.setItem('conductor_user_role', data.user.role);
+        window.dispatchEvent(new Event('role_changed'));
+        router.push('/');
+      } else {
+        setError(data.message || 'Invalid email or password');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Network error connecting to login service');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loginAs = (role: 'OWNER' | 'STAFF') => {
+    if (role === 'OWNER') {
+      setEmail('owner@agrawaltrading.com');
+      setPassword('owner123');
+      handleLogin(undefined, 'owner@agrawaltrading.com', 'owner123');
+    } else {
+      setEmail('staff@agrawaltrading.com');
+      setPassword('staff123');
+      handleLogin(undefined, 'staff@agrawaltrading.com', 'staff123');
+    }
+  };
+
   return (
     <div className="login-container">
       <div className="studio-grid"></div>
-      <div className="login-card hex-card">
+      <div className="login-card hex-card" style={{ maxWidth: '440px' }}>
         <CornerCrosshairs />
         <div className="login-header">
-          <div className="logo-placeholder lg">PD</div>
-          <h1>Sign in to Conductor</h1>
-          <p>Context Studio Environment</p>
+          <div className="logo-placeholder lg">ATC</div>
+          <h1>ATC Conductor</h1>
+          <p>Enterprise Pharma Intelligence Platform</p>
         </div>
 
-        <form className="login-form">
+        {error && (
+          <div style={{
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: '8px',
+            padding: '10px 14px',
+            color: '#f87171',
+            fontSize: '13px',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}>
+            <AlertCircle size={16} />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <form className="login-form" onSubmit={handleLogin}>
           <div className="form-group">
-            <label htmlFor="email">Email or ID</label>
+            <label htmlFor="email">Work Email</label>
             <input 
-              type="text" 
+              type="email" 
               id="email" 
               className="hex-input" 
-              placeholder="demo" 
-              defaultValue="demo"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="user@agrawaltrading.com" 
+              required
             />
           </div>
           
@@ -41,31 +113,54 @@ export default function LoginPage() {
               type="password" 
               id="password" 
               className="hex-input" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••" 
-              defaultValue="demo"
+              required
             />
           </div>
 
-          <Link href="/" className="btn-primary" style={{ textAlign: 'center', textDecoration: 'none', marginTop: '16px' }}>
-            Access Environment
-          </Link>
+          <button 
+            type="submit" 
+            className="btn-primary" 
+            disabled={loading}
+            style={{ width: '100%', marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+          >
+            <Lock size={15} />
+            <span>{loading ? 'Authenticating...' : 'Sign In Securely'}</span>
+          </button>
         </form>
 
-        <div className="tron-divider">
+        <div className="tron-divider" style={{ margin: '20px 0 16px' }}>
           <div className="divider-line"></div>
           <div className="divider-line"></div>
           <div className="divider-line"></div>
         </div>
 
-        <button className="btn-outline google-btn">
-          <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
-            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-          </svg>
-          Single Sign-On
-        </button>
+        <div style={{ fontSize: '11px', color: '#94a3b8', textAlign: 'center', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          Quick Demo Access
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button 
+            type="button"
+            className="btn-outline" 
+            onClick={() => loginAs('OWNER')}
+            style={{ flex: 1, fontSize: '12px', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', borderColor: 'rgba(52, 211, 153, 0.4)', color: '#34d399' }}
+          >
+            <ShieldCheck size={14} />
+            <span>Owner (Executive)</span>
+          </button>
+          <button 
+            type="button"
+            className="btn-outline" 
+            onClick={() => loginAs('STAFF')}
+            style={{ flex: 1, fontSize: '12px', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', borderColor: 'rgba(96, 165, 250, 0.4)', color: '#60a5fa' }}
+          >
+            <UserCheck size={14} />
+            <span>Staff (Counter)</span>
+          </button>
+        </div>
       </div>
     </div>
   );

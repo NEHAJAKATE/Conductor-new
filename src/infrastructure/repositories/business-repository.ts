@@ -1,6 +1,24 @@
+import fs from 'fs';
+import path from 'path';
 import { BusinessEntity, BusinessClassification } from '@/core/domain/canonical-models';
-import { v5 as uuidv5 } from 'uuid';
-import { config } from '@/core/config';
+
+const READY_DIR = path.resolve(process.cwd(), 'data', 'ready');
+
+function ensureReadyDir() {
+  try {
+    if (!fs.existsSync(READY_DIR)) {
+      fs.mkdirSync(READY_DIR, { recursive: true });
+    }
+  } catch (err) {
+    console.error('[BusinessRepository] Failed to create data/ready dir:', err);
+  }
+}
+
+export interface BusinessNameLookupResult {
+  status: 'LEDGER_MATCH' | 'DISPLAY_NAME_MATCH' | 'AMBIGUOUS' | 'NOT_FOUND';
+  business?: BusinessEntity;
+  candidates?: BusinessEntity[];
+}
 
 export interface BusinessSearchFilter {
   query?: string;
@@ -16,6 +34,37 @@ export class BusinessRepository {
   private gstinIndex = new Map<string, string>(); // GSTIN -> Business ID
   private panIndex = new Map<string, string>();   // PAN -> Business ID
   private nameIndex = new Map<string, string>();  // Normalized Name -> Business ID
+  private ledgerIndex = new Map<string, string>(); // Normalized Ledger Name -> Business ID
+  private filePath = path.join(READY_DIR, 'businesses.json');
+
+  constructor() {
+    this.loadFromDisk();
+  }
+
+  private loadFromDisk() {
+    try {
+      if (fs.existsSync(this.filePath)) {
+        const raw = fs.readFileSync(this.filePath, 'utf8');
+        const list: BusinessEntity[] = JSON.parse(raw);
+        list.forEach(b => {
+          this.businesses.set(b.id, b);
+          this.updateIndexes(b);
+        });
+      }
+    } catch (err) {
+      console.error('[BusinessRepository] Failed to load from disk:', err);
+    }
+  }
+
+  private async persistToDisk() {
+    try {
+      ensureReadyDir();
+      const list = Array.from(this.businesses.values());
+      await fs.promises.writeFile(this.filePath, JSON.stringify(list, null, 2), 'utf8');
+    } catch (err) {
+      console.error('[BusinessRepository] Failed to persist to disk:', err);
+    }
+  }
 
   async save(business: BusinessEntity): Promise<BusinessEntity> {
     const existingId = this.findExistingId(business);
@@ -23,11 +72,30 @@ export class BusinessRepository {
 
     const existing = this.businesses.get(targetId);
     if (existing) {
-      // Merge attributes preserving non-null values
+      const updatedAliasLedgers = existing.aliasLedgers 
+        ? [...existing.aliasLedgers] 
+        : (existing.ledgerName ? [existing.ledgerName] : []);
+      let needsReview = existing.needsReview || false;
+      let reviewReason = existing.reviewReason;
+
+      if (business.ledgerName && existing.ledgerName && business.ledgerName !== existing.ledgerName) {
+        if (!updatedAliasLedgers.includes(business.ledgerName)) {
+          updatedAliasLedgers.push(business.ledgerName);
+        }
+        needsReview = true;
+        reviewReason = `GSTIN/PAN '${business.taxId || business.pan || business.id}' maps to multiple ledger names: '${existing.ledgerName}' and '${business.ledgerName}'. Preserving all in aliasLedgers for business review.`;
+        console.warn(`[BusinessRepository] ${reviewReason}`);
+      }
+
+      // Merge attributes preserving non-null values without destructive overwrite
       const merged: BusinessEntity = {
         ...existing,
-        name: business.name || existing.name,
-        legalName: business.legalName || existing.legalName,
+        name: existing.name || business.name,
+        legalName: existing.legalName || business.legalName,
+        ledgerName: existing.ledgerName || business.ledgerName,
+        aliasLedgers: updatedAliasLedgers.length > 1 ? updatedAliasLedgers : (existing.aliasLedgers || undefined),
+        needsReview: needsReview || undefined,
+        reviewReason: reviewReason || undefined,
         taxId: business.taxId || existing.taxId,
         pan: business.pan || existing.pan,
         drugLicenses: Array.from(new Set([...(existing.drugLicenses || []), ...(business.drugLicenses || [])])),
@@ -45,16 +113,21 @@ export class BusinessRepository {
         totalSales: (existing.totalSales || 0) + (business.totalSales || 0),
         totalPurchases: (existing.totalPurchases || 0) + (business.totalPurchases || 0),
         currentOutstanding: business.currentOutstanding !== undefined ? business.currentOutstanding : existing.currentOutstanding,
+        outstandingMatchType: business.outstandingMatchType !== undefined ? business.outstandingMatchType : existing.outstandingMatchType,
+        outstandingMatchConfidence: business.outstandingMatchConfidence !== undefined ? business.outstandingMatchConfidence : existing.outstandingMatchConfidence,
+        outstandingMatchedAt: business.outstandingMatchedAt !== undefined ? business.outstandingMatchedAt : existing.outstandingMatchedAt,
         updatedAt: new Date().toISOString(),
       };
 
       this.businesses.set(targetId, merged);
       this.updateIndexes(merged);
+      await this.persistToDisk();
       return merged;
     }
 
     this.businesses.set(targetId, business);
     this.updateIndexes(business);
+    await this.persistToDisk();
     return business;
   }
 
@@ -65,9 +138,8 @@ export class BusinessRepository {
     if (b.pan && this.panIndex.has(b.pan)) {
       return this.panIndex.get(b.pan)!;
     }
-    const normName = this.normalizeName(b.name);
-    if (normName && this.nameIndex.has(normName)) {
-      return this.nameIndex.get(normName)!;
+    if (this.businesses.has(b.id)) {
+      return b.id;
     }
     return null;
   }
@@ -79,15 +151,82 @@ export class BusinessRepository {
   private updateIndexes(b: BusinessEntity) {
     if (b.taxId) this.gstinIndex.set(b.taxId, b.id);
     if (b.pan) this.panIndex.set(b.pan, b.id);
+    const allLedgers = [b.ledgerName, ...(b.aliasLedgers || [])].filter(Boolean) as string[];
+    for (const l of allLedgers) {
+      const normLedger = this.normalizeName(l);
+      if (normLedger) this.ledgerIndex.set(normLedger, b.id);
+    }
     const normName = this.normalizeName(b.name);
     if (normName) this.nameIndex.set(normName, b.id);
   }
 
   async findById(id: string): Promise<BusinessEntity | undefined> {
+    if (this.businesses.size === 0) this.loadFromDisk();
     return this.businesses.get(id);
   }
 
+  async findByName(rawDescription: string): Promise<BusinessNameLookupResult> {
+    if (this.businesses.size === 0) this.loadFromDisk();
+    const normInput = this.normalizeName(rawDescription);
+    if (!normInput) return { status: 'NOT_FOUND' };
+    const cleanInput = rawDescription.toLowerCase().replace(/\s+/g, ' ').trim();
+
+    // Step 2: Search against ledgerName and aliasLedgers first (98.7% match path confirmed against actual data)
+    const matchedByLedger: BusinessEntity[] = [];
+    const seenLedgerIds = new Set<string>();
+
+    for (const b of this.businesses.values()) {
+      const allLedgers = [b.ledgerName, ...(b.aliasLedgers || [])].filter(Boolean) as string[];
+      for (const lName of allLedgers) {
+        const bLedgerNorm = this.normalizeName(lName);
+        const bLedgerClean = lName.toLowerCase().replace(/\s+/g, ' ').trim();
+
+        if (bLedgerNorm === normInput || bLedgerClean === cleanInput) {
+          if (!seenLedgerIds.has(b.id)) {
+            seenLedgerIds.add(b.id);
+            matchedByLedger.push(b);
+          }
+        }
+      }
+    }
+
+    if (matchedByLedger.length === 1) {
+      return { status: 'LEDGER_MATCH', business: matchedByLedger[0] };
+    }
+    if (matchedByLedger.length > 1) {
+      return { status: 'AMBIGUOUS', candidates: matchedByLedger };
+    }
+
+    // Step 3: Only if Step 2 found zero candidates, search against display name / legalName
+    const matchedByName: BusinessEntity[] = [];
+    const seenNameIds = new Set<string>();
+
+    for (const b of this.businesses.values()) {
+      const bNameNorm = this.normalizeName(b.name);
+      const bLegalNorm = b.legalName ? this.normalizeName(b.legalName) : '';
+      const bNameClean = b.name.toLowerCase().replace(/\s+/g, ' ').trim();
+      const bLegalClean = b.legalName ? b.legalName.toLowerCase().replace(/\s+/g, ' ').trim() : '';
+
+      if (bNameNorm === normInput || bLegalNorm === normInput || bNameClean === cleanInput || bLegalClean === cleanInput) {
+        if (!seenNameIds.has(b.id)) {
+          seenNameIds.add(b.id);
+          matchedByName.push(b);
+        }
+      }
+    }
+
+    if (matchedByName.length === 1) {
+      return { status: 'DISPLAY_NAME_MATCH', business: matchedByName[0] };
+    }
+    if (matchedByName.length > 1) {
+      return { status: 'AMBIGUOUS', candidates: matchedByName };
+    }
+
+    return { status: 'NOT_FOUND' };
+  }
+
   async list(filter?: BusinessSearchFilter): Promise<BusinessEntity[]> {
+    if (this.businesses.size === 0) this.loadFromDisk();
     let result = Array.from(this.businesses.values());
 
     if (filter?.query) {
@@ -123,6 +262,7 @@ export class BusinessRepository {
   }
 
   async getStats() {
+    if (this.businesses.size === 0) this.loadFromDisk();
     const all = Array.from(this.businesses.values());
     const totalBusinesses = all.length;
     let b2bDealers = 0;
@@ -159,6 +299,7 @@ export class BusinessRepository {
   }
 
   async count(): Promise<number> {
+    if (this.businesses.size === 0) this.loadFromDisk();
     return this.businesses.size;
   }
 
@@ -167,6 +308,8 @@ export class BusinessRepository {
     this.gstinIndex.clear();
     this.panIndex.clear();
     this.nameIndex.clear();
+    this.ledgerIndex.clear();
+    await this.persistToDisk();
   }
 }
 

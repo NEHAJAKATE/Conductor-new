@@ -1,17 +1,10 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { bootstrap } from '@/core/services/bootstrap';
-import { AtcIngestRunner } from '@/core/services/atc-ingest-runner';
 
 export async function GET(request: NextRequest) {
   try {
     const context = bootstrap();
     
-    // Ensure canonical stores have data from ATC datasets if needed
-    const count = await context.businessRepository.count();
-    if (count === 0) {
-      await AtcIngestRunner.runFullAtcIngestion();
-    }
-
     const searchParams = request.nextUrl.searchParams;
     const query = searchParams.get('query') || '';
     const getStats = searchParams.get('stats') === 'true';

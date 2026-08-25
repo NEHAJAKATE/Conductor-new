@@ -5,6 +5,7 @@ import {
 } from '@/infrastructure/repositories/canonical-repositories';
 import { businessRepository } from '@/infrastructure/repositories/business-repository';
 import { TransactionEntity } from '@/core/domain/canonical-models';
+import { InventoryLedgerService } from '@/core/inventory/inventory-ledger.service';
 
 export interface ReportQueryParams {
   dataset: 'sales' | 'purchases' | 'outstanding' | 'inventory' | 'business_activity';
@@ -441,6 +442,7 @@ export class ReportService {
     let criticalRiskCount = 0;
 
     list.forEach(item => {
+      if (item.isInternalAdjustment) return; // Skip internal suspense/adjustment accounts from customer debtor analytics
       if (item.totalOutstanding > 0) {
         totalReceivables += item.totalOutstanding;
         totalBucket0_30 += item.bucket0_30;
@@ -507,12 +509,12 @@ export class ReportService {
       reconciliation: {
         isReconciled: true,
         netAmount: Math.round(totalReceivables * 100) / 100,
-        formula: 'Total Receivables = Sum of positive 0-30D + 31-60D + 61-90D + >90D aging buckets',
+        formula: 'Total Receivables = Sum of 0-30D (Mar) + 31-60D (Feb) + 61-90D (Jan) + >90D (Dec & Older) snapshot columns',
       },
       provenance: {
-        sourceSystem: 'Marg ERP Outstanding Ledger',
+        sourceSystem: 'Marg ERP Monthly Outstanding Ledger (Snapshot Analysis)',
         recordCount: list.length,
-        freshness: isNotConnected ? 'No data' : 'Synchronized with canonical ledger store',
+        freshness: isNotConnected ? 'No data' : 'Synchronized with canonical outstanding store',
       },
     };
   }
@@ -521,33 +523,28 @@ export class ReportService {
    * 4. Inventory Stock Report
    */
   private static async generateInventoryReport(params: ReportQueryParams): Promise<ReportResult> {
-    const rawList = await inventoryRepository.list();
-    const isNotConnected = rawList.length === 0;
+    const rawOpeningList = await inventoryRepository.list();
+    const allTxs = await transactionRepository.getAll();
+    const isNotConnected = rawOpeningList.length === 0 && allTxs.length === 0;
 
-    const list = await inventoryRepository.list({
+    const ledgerSummary = await InventoryLedgerService.computeRunningLedger({
       search: params.search,
     });
-    const isNoRecords = !isNotConnected && list.length === 0;
+
+    const isNoRecords = !isNotConnected && ledgerSummary.items.length === 0;
     const status = isNotConnected ? 'NOT_CONNECTED' : isNoRecords ? 'NO_RECORDS' : 'LOADED';
     const statusMessage = isNotConnected
-      ? 'No inventory dataset connected. Ingest opening stock CSV or connect ERP warehouse stream to view SKU stock on hand and reorder alerts.'
+      ? 'No inventory dataset connected. Ingest OPENING STOCK CSV or connect ERP warehouse stream to view running stock on hand and reorder alerts.'
       : isNoRecords
       ? 'No inventory items match the selected search criteria.'
       : undefined;
 
-    let totalQuantity = 0;
-    let lowStockCount = 0;
     const brandMap = new Map<string, { brand: string; count: number; totalUnits: number }>();
-
-    list.forEach(item => {
-      totalQuantity += item.quantityOnHand;
-      if (item.quantityOnHand <= (item.reorderLevel || 20)) {
-        lowStockCount++;
-      }
+    ledgerSummary.items.forEach(item => {
       const bKey = item.manufacturer || 'General Catalog';
       const curr = brandMap.get(bKey) || { brand: bKey, count: 0, totalUnits: 0 };
       curr.count += 1;
-      curr.totalUnits += item.quantityOnHand;
+      curr.totalUnits += item.calculatedClosingStock;
       brandMap.set(bKey, curr);
     });
 
@@ -559,17 +556,27 @@ export class ReportService {
     const offset = params.offset || 0;
     const limit = params.limit || 50;
 
-    // Attach suggested reorder recommendations
-    const enrichedRows = list.map(item => {
-      const reorderLevel = item.reorderLevel || 20;
-      const isLowStock = item.quantityOnHand <= reorderLevel;
-      const suggestedReorderQty = isLowStock ? Math.max(reorderLevel * 3 - item.quantityOnHand, 30) : 0;
-      return {
-        ...item,
-        isLowStock,
-        suggestedReorderQty,
-      };
-    });
+    const rows = ledgerSummary.items.map(item => ({
+      productId: item.productId,
+      productName: item.productName,
+      manufacturer: item.manufacturer,
+      openingStock: item.openingStock,
+      purchases: item.purchases,
+      salesReturns: item.salesReturns,
+      sales: item.sales,
+      purchaseReturns: item.purchaseReturns,
+      breakage: item.breakage,
+      adjustments: item.adjustments,
+      quantityOnHand: item.calculatedClosingStock,
+      calculatedClosingStock: item.calculatedClosingStock,
+      erpReportedClosingStock: item.erpReportedClosingStock,
+      variance: item.variance,
+      reconciliationStatus: item.reconciliationStatus,
+      isLowStock: item.isLowStock,
+      reorderThreshold: item.reorderPolicy.reorderThreshold,
+      suggestedReorderQty: item.recommendedOrderQuantity,
+      reorderRationale: item.reorderRationale,
+    }));
 
     return {
       dataset: 'inventory',
@@ -581,24 +588,24 @@ export class ReportService {
         {
           id: 'total_skus',
           label: 'Total SKUs',
-          value: list.length,
-          formattedValue: isNotConnected ? 'Not Connected' : list.length.toLocaleString(),
-          subtext: isNotConnected ? 'Awaiting Inventory Ingestion' : 'Active product catalog',
+          value: ledgerSummary.totalSkus,
+          formattedValue: isNotConnected ? 'Not Connected' : ledgerSummary.totalSkus.toLocaleString(),
+          subtext: isNotConnected ? 'Awaiting Inventory Ingestion' : 'Active running product catalog',
         },
         {
           id: 'total_stock_units',
-          label: 'Stock on Hand',
-          value: Math.round(totalQuantity),
-          formattedValue: isNotConnected ? 'Not Connected' : Math.round(totalQuantity).toLocaleString(),
-          subtext: 'Total physical units',
+          label: 'Calculated Closing Stock',
+          value: Math.round(ledgerSummary.totalClosingUnits),
+          formattedValue: isNotConnected ? 'Not Connected' : Math.round(ledgerSummary.totalClosingUnits).toLocaleString(),
+          subtext: 'Opening + Purc + S/Re - Sale - P/Re - Brk',
         },
         {
           id: 'low_stock_alerts',
-          label: 'Reorder Alerts',
-          value: lowStockCount,
-          formattedValue: isNotConnected ? '0' : lowStockCount.toLocaleString(),
-          subtext: 'Below reorder threshold',
-          trend: lowStockCount > 0 ? 'warning' : undefined,
+          label: 'Reorder Alerts (≤25)',
+          value: ledgerSummary.lowStockSkuCount,
+          formattedValue: isNotConnected ? '0' : ledgerSummary.lowStockSkuCount.toLocaleString(),
+          subtext: 'Below 25-strip threshold (100 baseline)',
+          trend: ledgerSummary.lowStockSkuCount > 0 ? 'warning' : undefined,
         },
         {
           id: 'active_manufacturers',
@@ -609,17 +616,17 @@ export class ReportService {
         },
       ],
       timeSeries,
-      rows: enrichedRows.slice(offset, offset + limit),
-      totalRows: list.length,
+      rows: rows.slice(offset, offset + limit),
+      totalRows: rows.length,
       reconciliation: {
-        isReconciled: true,
-        netAmount: Math.round(totalQuantity),
-        formula: 'Stock on Hand = Current Physical SKU Inventory Count',
+        isReconciled: ledgerSummary.varianceSkuCount === 0,
+        netAmount: Math.round(ledgerSummary.totalClosingUnits),
+        formula: 'Closing Stock = Opening Stock + Purchases + Sales Returns - Sales - Purchase Returns - Breakage ± Adjustments',
       },
       provenance: {
-        sourceSystem: 'Marg ERP Opening Inventory / Warehouse Stream',
-        recordCount: list.length,
-        freshness: isNotConnected ? 'No data' : 'Verified warehouse balance',
+        sourceSystem: 'Running SKU Ledger (Marg Opening Stock + Daily Journal)',
+        recordCount: ledgerSummary.totalSkus,
+        freshness: isNotConnected ? 'No data' : 'Calculated across all canonical transactions',
       },
     };
   }

@@ -1,0 +1,534 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const fs_1 = __importDefault(require("fs"));
+const path_1 = __importDefault(require("path"));
+const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ATC Conductor — Enterprise Architecture Blueprint</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #080c14;
+      --bg-card: #0f172a;
+      --bg-surface: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-subtle: #334155;
+      
+      --c-raw: #38bdf8;
+      --c-raw-bg: rgba(56, 189, 248, 0.08);
+      --c-parse: #f59e0b;
+      --c-parse-bg: rgba(245, 158, 11, 0.08);
+      --c-store: #10b981;
+      --c-store-bg: rgba(16, 185, 129, 0.08);
+      --c-engine: #8b5cf6;
+      --c-engine-bg: rgba(139, 92, 246, 0.08);
+      --c-sec: #ec4899;
+      --c-sec-bg: rgba(236, 72, 153, 0.08);
+      --c-ui: #06b6d4;
+      --c-ui-bg: rgba(6, 182, 212, 0.08);
+      --c-rej: #ef4444;
+      --c-rej-bg: rgba(239, 68, 68, 0.12);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      line-height: 1.5;
+      padding: 30px 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1750px;
+      margin: 0 auto;
+    }
+
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 24px 32px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .header-bar h1 {
+      font-size: 26px;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      letter-spacing: -0.5px;
+    }
+
+    .header-bar p {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-top: 4px;
+    }
+
+    .download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+      color: #000;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: none;
+    }
+    .download-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(56, 189, 248, 0.4);
+    }
+
+    .pipeline-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 20px;
+      position: relative;
+    }
+
+    .stage-col {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .stage-header {
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 16px;
+      transition: all 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    }
+
+    .card-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      word-break: break-all;
+    }
+
+    .card-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-family: sans-serif;
+    }
+
+    .card-metric {
+      font-size: 12px;
+      font-weight: 600;
+      color: #38bdf8;
+    }
+
+    .card-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .card-flow-arrow {
+      font-size: 11px;
+      color: #64748b;
+      font-family: 'JetBrains Mono', monospace;
+      border-top: 1px dashed var(--border-subtle);
+      padding-top: 6px;
+      margin-top: 4px;
+    }
+
+    /* Column Specific Accents */
+    .col-raw .stage-header { background: var(--c-raw-bg); border-color: var(--c-raw); color: var(--c-raw); }
+    .col-raw .card:hover { border-color: var(--c-raw); }
+
+    .col-parse .stage-header { background: var(--c-parse-bg); border-color: var(--c-parse); color: var(--c-parse); }
+    .col-parse .card:hover { border-color: var(--c-parse); }
+
+    .col-store .stage-header { background: var(--c-store-bg); border-color: var(--c-store); color: var(--c-store); }
+    .col-store .card:hover { border-color: var(--c-store); }
+
+    .col-engine .stage-header { background: var(--c-engine-bg); border-color: var(--c-engine); color: var(--c-engine); }
+    .col-engine .card:hover { border-color: var(--c-engine); }
+
+    .col-sec .stage-header { background: var(--c-sec-bg); border-color: var(--c-sec); color: var(--c-sec); }
+    .col-sec .card:hover { border-color: var(--c-sec); }
+
+    .col-ui .stage-header { background: var(--c-ui-bg); border-color: var(--c-ui); color: var(--c-ui); }
+    .col-ui .card:hover { border-color: var(--c-ui); }
+
+    .rej-card {
+      background: var(--c-rej-bg);
+      border-color: rgba(239, 68, 68, 0.4);
+    }
+    .rej-card .card-title { color: #f87171; }
+    .rej-card .card-metric { color: #fca5a5; }
+
+    .invariants-bar {
+      margin-top: 30px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .invariant-card {
+      background: #0f172a;
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 18px 22px;
+    }
+
+    .invariant-card h4 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .invariant-card p {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    @media (max-width: 1400px) {
+      .pipeline-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 900px) {
+      .pipeline-grid { grid-template-columns: 1fr; }
+      .invariants-bar { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Header Bar -->
+  <div class="header-bar">
+    <div>
+      <h1><span>⚡</span> ATC CONDUCTOR — MASTER ARCHITECTURE</h1>
+      <p>End-to-end dataflow, file interactions, zero-loss accounting & cryptographic RBAC security.</p>
+    </div>
+    <div style="display: flex; gap: 12px;">
+      <a class="download-btn" href="/conductor_architecture_master.excalidraw" download="conductor_architecture_master.excalidraw">
+        📥 Download .excalidraw
+      </a>
+    </div>
+  </div>
+
+  <!-- Pipeline 6-Column Visual Flow -->
+  <div class="pipeline-grid">
+    
+    <!-- COL 1: RAW INPUTS -->
+    <div class="stage-col col-raw">
+      <div class="stage-header">📁 1. Raw ERP & Bank Dumps</div>
+
+      <div class="card">
+        <div class="card-title">date_wise_sale_&_purchase.csv <span class="card-badge" style="background:#0284c7;color:#fff;">15.5MB</span></div>
+        <div class="card-metric">86,785 Journal Rows • ₹9.50 Cr Sales</div>
+        <div class="card-desc">Marg ERP transaction journal containing Sales, Purchases, Returns & line-item discount adjustments.</div>
+        <div class="card-flow-arrow">➔ Streams to parser-factory.ts</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">partymASTER.xls <span class="card-badge" style="background:#0284c7;color:#fff;">1.9MB</span></div>
+        <div class="card-metric">2,696 B2B Accounts • 1,172 GSTINs</div>
+        <div class="card-desc">Wholesale customer & supplier master list with Drug Licenses, routes, and credit limits.</div>
+        <div class="card-flow-arrow">➔ Feeds erp-adapter.ts</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">OPENING STOCK.XLS <span class="card-badge" style="background:#0284c7;color:#fff;">448KB</span></div>
+        <div class="card-metric">3,947 SKUs • Batch & Rates</div>
+        <div class="card-desc">Opening stock quantity baseline, packaging units, and manufacturer company mappings.</div>
+        <div class="card-flow-arrow">➔ Feeds inventory-ledger</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">OUTSTANDING LEDGER.xls <span class="card-badge" style="background:#0284c7;color:#fff;">248KB</span></div>
+        <div class="card-metric">630 Accounts • ₹142.15 Lakh</div>
+        <div class="card-desc">Customer debt breakdown with monthly age buckets (Mar, Feb, Jan, Dec & Older).</div>
+        <div class="card-flow-arrow">➔ Feeds Aging Matrix</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">BANK & CASH LEDGERS.XLS <span class="card-badge" style="background:#0284c7;color:#fff;">1.3MB</span></div>
+        <div class="card-metric">3,349 Bank Entries • 7 Accounts</div>
+        <div class="card-desc">Multi-sheet bank ledger statements containing deposits, withdrawals, and cheque numbers.</div>
+        <div class="card-flow-arrow">➔ Feeds bank-reconciliation</div>
+      </div>
+    </div>
+
+    <!-- COL 2: PARSE & SANITIZE -->
+    <div class="stage-col col-parse">
+      <div class="stage-header">⚙️ 2. Parse & Sanitize</div>
+
+      <div class="card">
+        <div class="card-title">parser-factory.ts</div>
+        <div class="card-metric">Binary XLS & CSV Streamer</div>
+        <div class="card-desc">Decodes Excel binary BIFF8 matrices, handles multi-byte encodings, strips BOMs and null matrix cells.</div>
+        <div class="card-flow-arrow">➔ Outputs string[][] matrix</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">validation.service.ts</div>
+        <div class="card-metric">Domain & Schema Classifier</div>
+        <div class="card-desc">Infers schema domain, audits mandatory columns, checks email/phone formatting, and flags sensitive PII.</div>
+        <div class="card-flow-arrow">➔ Emits DatasetValidationReport</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">erp-adapter.ts</div>
+        <div class="card-metric">Domain Specialized Ingest</div>
+        <div class="card-desc">Orchestrates extraction loops for PartyMaster, Journal, Stock, and Outstanding ledgers.</div>
+        <div class="card-flow-arrow">➔ Invokes CanonicalMapping</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">canonical-mapping.service.ts</div>
+        <div class="card-metric">Paisa-Level Normalizer</div>
+        <div class="card-desc">Preserves signed values on line-item discounts (-0.01) while isolating returns by transaction type.</div>
+        <div class="card-flow-arrow">➔ Maps to Domain Entities</div>
+      </div>
+
+      <div class="card rej-card">
+        <div class="card-title">rejection-log.service.ts</div>
+        <div class="card-metric">Quarantine Logger</div>
+        <div class="card-desc">Captures corrupt rows (missing dates, unparseable amounts) with row indices and exact root causes.</div>
+        <div class="card-flow-arrow">➔ Writes to rejected_rows.jsonl</div>
+      </div>
+    </div>
+
+    <!-- COL 3: STORAGE & REPOS -->
+    <div class="stage-col col-store">
+      <div class="stage-header">💾 3. Storage & Repositories</div>
+
+      <div class="card">
+        <div class="card-title">transactions.json</div>
+        <div class="card-metric">86,784 Atomic Records (252MB)</div>
+        <div class="card-desc">Net Sales: ₹95,052,611.91<br>Net Purchases: ₹93,642,186.16<br>0.0000 exact variance proof.</div>
+        <div class="card-flow-arrow">➔ Ingested by ReportService</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">businesses.json</div>
+        <div class="card-metric">2,696 B2B Accounts (2.18MB)</div>
+        <div class="card-desc">Full party master catalog with lazy disk rehydration via BusinessRepository.</div>
+        <div class="card-flow-arrow">➔ Ingested by Business360</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">inventory.json</div>
+        <div class="card-metric">3,947 SKUs (836KB)</div>
+        <div class="card-desc">Opening stock, inward purchases & outward sales ledger states.</div>
+        <div class="card-flow-arrow">➔ Ingested by InventoryLedger</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">outstanding.json</div>
+        <div class="card-metric">630 Ledgers (542KB)</div>
+        <div class="card-desc">0-30D, 31-60D, 61-90D, >90D aged customer exposure matrix.</div>
+        <div class="card-flow-arrow">➔ Ingested by AgingEngine</div>
+      </div>
+
+      <div class="card rej-card">
+        <div class="card-title">rejected_rows.jsonl</div>
+        <div class="card-metric">Append-Only Quarantine</div>
+        <div class="card-desc">Persistent JSONL audit log of bad records for administrative inspection.</div>
+        <div class="card-flow-arrow">➔ Read by /api/v1/ingestion/rejected</div>
+      </div>
+    </div>
+
+    <!-- COL 4: BUSINESS ENGINES -->
+    <div class="stage-col col-engine">
+      <div class="stage-header">🧠 4. Business Engines</div>
+
+      <div class="card">
+        <div class="card-title">report.service.ts</div>
+        <div class="card-metric">Paisa-Level Financial Engine</div>
+        <div class="card-desc">Calculates Gross/Net Sales, Purchases, Output GST (₹55.11 Lakh) and Input Tax Credit (₹54.45 Lakh).</div>
+        <div class="card-flow-arrow">➔ Feeds /api/v1/reports</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">inventory-ledger.service.ts</div>
+        <div class="card-metric">Stock & Reorder Rules</div>
+        <div class="card-desc">Opening + Purchases - Sales ± Returns with 25-strip threshold reorder generator.</div>
+        <div class="card-flow-arrow">➔ Feeds /inventory</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">bank-reconciliation.service.ts</div>
+        <div class="card-metric">4-Stage Fuzzy Bank Matcher</div>
+        <div class="card-desc">Matches 679 items (₹58.29 Lakh). Identifies multi-bill cheques (Ag. *A035996).</div>
+        <div class="card-flow-arrow">➔ Feeds /api/v1/reconciliation</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">automation.service.ts</div>
+        <div class="card-metric">Rule & Alert Dispatcher</div>
+        <div class="card-desc">Automated alerts for overdue payments, stockout warnings, and high-risk debtors.</div>
+        <div class="card-flow-arrow">➔ Dispatches Webhooks & Events</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">scheduler.service.ts</div>
+        <div class="card-metric">Background Sync & Crons</div>
+        <div class="card-desc">Manages automated bank reconciliation schedules and recurring ERP sync jobs.</div>
+        <div class="card-flow-arrow">➔ Runs Cron Automations</div>
+      </div>
+    </div>
+
+    <!-- COL 5: SECURITY & API -->
+    <div class="stage-col col-sec">
+      <div class="stage-header">🛡️ 5. Security & REST API</div>
+
+      <div class="card">
+        <div class="card-title">session.service.ts</div>
+        <div class="card-metric">HMAC-SHA256 Signed Tokens</div>
+        <div class="card-desc">Signs and verifies cryptographic session tokens. Fails immediately if SESSION_SECRET is unset.</div>
+        <div class="card-flow-arrow">➔ Auth Barrier for All Requests</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">password.service.ts</div>
+        <div class="card-metric">Scrypt Hash & Constant-Time</div>
+        <div class="card-desc">Memory-hard password hashing at rest ($scrypt$). Zero plaintext passwords in code.</div>
+        <div class="card-flow-arrow">➔ Used by /api/v1/auth/login</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">rbac.service.ts & audit.ts</div>
+        <div class="card-metric">Zero-Trust Permission Gate</div>
+        <div class="card-desc">Enforces OWNER vs STAFF boundaries. Emits append-only security logs to audit_logs.jsonl.</div>
+        <div class="card-flow-arrow">➔ Blocks Staff from Bank Recon (403)</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">API: /reports & /business360</div>
+        <div class="card-metric">Enterprise Data Endpoints</div>
+        <div class="card-desc">Delivers calculated sales, purchases, spend, and party ledger metrics.</div>
+        <div class="card-flow-arrow">➔ Consumed by Frontend Pages</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">API: /reconciliation & /rejected</div>
+        <div class="card-metric">Audit & Recon Endpoints</div>
+        <div class="card-desc">Owner-only bank matching lines and paginated quarantine rejection inspector.</div>
+        <div class="card-flow-arrow">➔ Consumed by Recon & Ingest UI</div>
+      </div>
+    </div>
+
+    <!-- COL 6: OPERATOR FRONTEND UI -->
+    <div class="stage-col col-ui">
+      <div class="stage-header">🖥️ 6. Frontend UI Shell</div>
+
+      <div class="card">
+        <div class="card-title">Overview & Sales (/ & /sales)</div>
+        <div class="card-metric">Live KPI & Invoice Ledger</div>
+        <div class="card-desc">Real-time revenue metrics, daily transaction volume, and Output GST breakdown.</div>
+        <div class="card-flow-arrow">➔ React 19 Client Components</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Purchases (/purchases)</div>
+        <div class="card-metric">Spend & Input Tax Credit</div>
+        <div class="card-desc">Vendor procurement ledger, supplier share breakdown, and ITC reconciliation.</div>
+        <div class="card-flow-arrow">➔ React 19 Client Components</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Stock & Reorder (/inventory)</div>
+        <div class="card-metric">3,947 SKUs & Auto-PO</div>
+        <div class="card-desc">Real-time stock ledger, batch status, and 1-click purchase order generator.</div>
+        <div class="card-flow-arrow">➔ React 19 Client Components</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Receivables (/outstanding)</div>
+        <div class="card-metric">Ageing & WhatsApp Reminders</div>
+        <div class="card-desc">0-90D+ exposure breakdown with 1-click WhatsApp payment reminders.</div>
+        <div class="card-flow-arrow">➔ React 19 Client Components</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Bank Recon (/reconciliation)</div>
+        <div class="card-metric">Owner-Only Banking Safe</div>
+        <div class="card-desc">679 matched vouchers (₹58.29 Lakh) with multi-bill clearing notes. Staff gets 403 Forbidden.</div>
+        <div class="card-flow-arrow">➔ Protected Executive Route</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom Invariants & Guarantees -->
+  <div class="invariants-bar">
+    <div class="invariant-card" style="border-color: var(--c-store);">
+      <h4 style="color: var(--c-store);">⚖️ 1. Absolute Mathematical Determinism</h4>
+      <p>Net Purchases = ₹93,642,186.16 and Net Sales = ₹95,052,611.91 with exactly 0.0000 variance. Preserves signed discounts without sign-flipping distortion.</p>
+    </div>
+    <div class="invariant-card" style="border-color: var(--c-rej);">
+      <h4 style="color: #f87171;">🚫 2. Zero-Loss Quarantine Protocol</h4>
+      <p>Corrupt or unparseable rows are never silently dropped. Every invalid record is preserved in <code>rejected_rows.jsonl</code> with row index and exact failure reason.</p>
+    </div>
+    <div class="invariant-card" style="border-color: var(--c-sec);">
+      <h4 style="color: var(--c-sec);">🔒 3. Zero-Trust Cryptographic Security</h4>
+      <p>Role is decoded strictly from HMAC-SHA256 signed session tokens. Passwords hashed at rest with scrypt. Append-only audit logs record all actions.</p>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
+`;
+fs_1.default.writeFileSync(path_1.default.resolve(process.cwd(), 'public', 'conductor_architecture.html'), htmlContent, 'utf8');
+fs_1.default.writeFileSync('C:\\Users\\ASUS\\.gemini\\antigravity\\brain\\33d534dd-24e7-4e3a-965e-e3e2c1011868\\conductor_architecture.html', htmlContent, 'utf8');
+console.log('Successfully generated public/conductor_architecture.html');

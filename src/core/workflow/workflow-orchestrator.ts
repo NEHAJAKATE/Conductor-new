@@ -13,6 +13,7 @@ import { TransformationService } from '@/core/services/transformation.service';
 import { IdentityService } from '@/core/identity/identity.service';
 import { DeduplicationService } from '@/core/identity/deduplication.service';
 import { StatisticsService, PipelineMetrics } from '@/core/telemetry/statistics.service';
+import { ParquetService } from '@/core/services/parquet.service';
 import { StorageAdapterFactory } from '@/core/storage/storage-adapter';
 import { CanonicalMappingService } from '@/core/mapping/canonical-mapping.service';
 import { businessRepository } from '@/infrastructure/repositories/business-repository';
@@ -679,39 +680,38 @@ export class WorkflowService {
           // Person-Centric Customer CDP
           for (const r of deduplicationResult.deduplicatedRecords) {
             await customerRepository.save({
-              id: r.id || `cust_${Date.now()}_${Math.random()}`,
-              name: r.name || r.email || r.flight_number || 'Unnamed Customer',
-              email: r.email || undefined,
-              phone: r.phone || r.mobile || undefined,
-              pan: r.pan || undefined,
-              aadhaar: r.aadhaar || undefined,
-              primaryAddress: r.city || r.departure_city ? {
-                city: r.city || r.departure_city,
-                country: r.country || r.departure_country || 'Global',
-              } : undefined,
-              behavioralEvents: r.issue || r.ticket_id || r.flight_status ? [{
-                id: `evt_${Date.now()}_${Math.random()}`,
-                type: 'support_ticket',
-                category: r.airline_name || 'Support',
-                timestamp: r.departure_date || new Date().toISOString(),
-                payload: {
-                  flightNumber: r.flight_number,
-                  ticketId: r.ticket_id,
-                  status: r.flight_status || r.status,
-                  departure: r.departure_airport,
-                  arrival: r.arrival_airport,
-                  csat: r.csat,
-                }
-              }] : [],
-              dataLineage: [{
-                sourceId: workflow.id,
-                sourceDataset: workflow.fileName,
-                connectorType: workflow.connectorType,
+              uuid: r.id || `cust_${Date.now()}_${Math.random()}`,
+              identity: {
+                customerId: r.id || `cust_${Date.now()}`,
+                name: r.name || r.email || 'Unnamed Customer',
+                email: r.email || undefined,
+                phone: r.phone || r.mobile || undefined,
+                pan: r.pan || undefined,
+                aadhaar: r.aadhaar || undefined,
+                address: r.city || undefined,
+                sourceSystem: workflow.fileName,
                 ingestedAt: new Date().toISOString(),
-                recordIndex: 0
+              },
+              piiTags: [],
+              behavioralEvents: [],
+              financial: {
+                accounts: [],
+                cards: [],
+                loans: [],
+                invoices: [],
+                payments: [],
+                subscriptions: [],
+                creditScore: 750,
+              },
+              lineage: [{
+                attributeName: 'all',
+                sourceSystem: workflow.fileName,
+                timestamp: new Date().toISOString(),
+                originalValue: 'ingestion_stream',
               }],
+              confidence: 95,
               createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
+              updatedAt: new Date().toISOString(),
             });
           }
           this.logStage(workflow, 'normalized_storage', `Loaded ${deduplicationResult.deduplicatedRecords.length} profiles into Customer 360 CDP.`, 'success');

@@ -173,10 +173,12 @@ export default function InventoryPage() {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Product SKU & Packaging</th>
-                    <th>Manufacturer / Brand</th>
-                    <th>Physical Stock on Hand</th>
-                    <th>Reorder Baseline</th>
+                    <th>Product SKU & Brand</th>
+                    <th>Opening</th>
+                    <th>Purchases (+)</th>
+                    <th>Sales (-)</th>
+                    <th>Closing Stock</th>
+                    <th>Reorder Threshold</th>
                     <th>Status & Risk</th>
                     <th>Procurement Action</th>
                   </tr>
@@ -184,31 +186,37 @@ export default function InventoryPage() {
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
-                        Loading warehouse stock catalog...
+                      <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                        Calculating real-time running SKU inventory ledger...
                       </td>
                     </tr>
                   ) : !report || report.rows.length === 0 ? (
                     <tr>
-                      <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                      <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
                         No inventory records matched your search criteria.
                       </td>
                     </tr>
                   ) : (
                     report.rows.slice(0, 50).map((row: any, i: number) => {
-                      const isLow = row.quantityOnHand <= (row.reorderLevel || 20);
+                      const threshold = row.reorderThreshold || row.reorderLevel || 25;
+                      const isLow = row.isLowStock !== undefined ? row.isLowStock : row.quantityOnHand <= threshold;
                       const isDrafted = draftedPoItems.has(row.productId);
                       return (
                         <tr key={i}>
-                          <td style={{ fontWeight: 600, color: '#f8fafc' }}>{row.productName}</td>
-                          <td style={{ color: '#94a3b8' }}>{row.manufacturer || 'Pharmaceuticals'}</td>
-                          <td style={{ fontWeight: 700, color: isLow ? '#f87171' : '#34d399' }}>
-                            {Math.round(row.quantityOnHand * 100) / 100} {row.unit || 'Units'}
+                          <td>
+                            <div style={{ fontWeight: 600, color: '#f8fafc' }}>{row.productName}</div>
+                            <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{row.manufacturer || 'General'}</div>
                           </td>
-                          <td>{row.reorderLevel || 20} Units</td>
+                          <td style={{ color: '#94a3b8' }}>{row.openingStock ?? 0}</td>
+                          <td style={{ color: '#60a5fa' }}>+{row.purchases ?? 0}</td>
+                          <td style={{ color: '#f43f5e' }}>-{row.sales ?? 0}</td>
+                          <td style={{ fontWeight: 700, color: isLow ? '#f87171' : '#34d399' }}>
+                            {Math.round(row.quantityOnHand * 100) / 100} {row.unit || 'Strips'}
+                          </td>
+                          <td style={{ color: '#fbbf24', fontSize: '0.85rem' }}>{threshold} Strips</td>
                           <td>
                             {isLow ? (
-                              <span className="badge badge-danger">Low Stock Alert</span>
+                              <span className="badge badge-danger">Low Stock (≤{threshold})</span>
                             ) : (
                               <span className="badge badge-success">Sufficient</span>
                             )}
@@ -284,7 +292,7 @@ export default function InventoryPage() {
                   <div>
                     <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>Reorder Threshold</div>
                     <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fbbf24' }}>
-                      {activeReorderItem.reorderLevel || 20} Units
+                      {activeReorderItem.reorderThreshold || activeReorderItem.reorderLevel || 25} Strips
                     </div>
                   </div>
                   <div>

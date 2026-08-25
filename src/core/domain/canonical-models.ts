@@ -42,10 +42,13 @@ export interface BusinessCreditProfile {
   isFrozen?: boolean;
 }
 
+export type OutstandingMatchType = 'DIRECT_CANONICAL_ID' | 'LEDGER_NAME_MATCH' | 'DISPLAY_NAME_FALLBACK';
+
 export interface BusinessEntity {
   id: string; // Deterministic canonical ID (e.g. gstin:09..., pan:..., erp:...)
   name: string;
   legalName?: string;
+  ledgerName?: string; // Raw Tally/Marg ERP ledger string, primary match key
   erpCode?: string;
   taxId?: string; // GSTIN / TIN
   pan?: string;
@@ -63,6 +66,12 @@ export interface BusinessEntity {
   totalSales?: number;
   totalPurchases?: number;
   currentOutstanding?: number;
+  outstandingMatchType?: OutstandingMatchType;
+  outstandingMatchConfidence?: number;
+  outstandingMatchedAt?: string;
+  aliasLedgers?: string[]; // Preserves all distinct ledger account strings under this tax ID
+  needsReview?: boolean;   // Flags GSTIN/PAN collisions for business review
+  reviewReason?: string;
   sourceSystem: string;
   createdAt: string;
   updatedAt: string;
@@ -146,11 +155,30 @@ export interface OutstandingEntity {
   gstin?: string;
   pan?: string;
   totalOutstanding: number;
+  isInternalAdjustment?: boolean; // True for non-customer internal ledgers (e.g. suspense, stock shortage)
+  // UI standard buckets
   bucket0_30: number;
   bucket31_60: number;
   bucket61_90: number;
   bucket90Plus: number;
+  // SOW specific buckets
+  bucket30_45?: number;
+  bucket45_60?: number;
+  bucket60Plus?: number;
+  // Monthly snapshot breakdown from Marg ERP
+  monthlyBreakdown?: {
+    march2026?: number;
+    feb2026?: number;
+    jan2026?: number;
+    dec2025?: number;
+    nov2025?: number;
+    oct2025?: number;
+    olderSep2025?: number;
+  };
   riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  riskRationale?: string;
+  dataSourceType: 'monthly_snapshot' | 'invoice_level';
+  notice?: string;
   groupUid?: string;
   lastUpdated: string;
 }

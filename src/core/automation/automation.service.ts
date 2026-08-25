@@ -125,6 +125,20 @@ export class AutomationService {
     return this.logs;
   }
 
+  async evaluateOutstanding(record: { name: string; bucket90Plus: number }): Promise<AutomationExecutionLog | null> {
+    if (record.bucket90Plus > 50000) {
+      return this.recordReminder({
+        partyName: record.name,
+        amount: record.bucket90Plus,
+        overdue90Plus: record.bucket90Plus,
+        channel: 'EMAIL',
+        recipient: 'accounts@agrawaltrading.com',
+        message: `High risk overdue alert for ${record.name}`,
+      });
+    }
+    return null;
+  }
+
   async recordReminder(params: {
     partyName: string;
     amount: number;
