@@ -34,30 +34,33 @@ export default function Sidebar() {
     const checkSession = async () => {
       try {
         let token = localStorage.getItem('conductor_session_token');
-        if (!token) {
-          const authRes = await fetch('/api/v1/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: 'owner@agrawaltrading.com', password: 'owner123' }),
+        if (token) {
+          const res = await fetch('/api/v1/auth/session', {
+            headers: { 'Authorization': `Bearer ${token}` },
           });
-          if (authRes.ok) {
-            const authData = await authRes.json();
-            token = authData.token;
-            if (token) {
-              localStorage.setItem('conductor_session_token', token);
-              localStorage.setItem('conductor_user_role', 'OWNER');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.authenticated && data.user?.role) {
+              setUserRole(data.user.role);
+              localStorage.setItem('conductor_user_role', data.user.role);
+              return;
             }
           }
         }
 
-        const res = await fetch('/api/v1/auth/session', {
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+        // If no token or token is invalid/expired (401), authenticate cleanly
+        localStorage.removeItem('conductor_session_token');
+        const authRes = await fetch('/api/v1/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: 'owner@agrawaltrading.com', password: 'owner123' }),
         });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.authenticated && data.user?.role) {
-            setUserRole(data.user.role);
-            localStorage.setItem('conductor_user_role', data.user.role);
+        if (authRes.ok) {
+          const authData = await authRes.json();
+          if (authData.token) {
+            localStorage.setItem('conductor_session_token', authData.token);
+            localStorage.setItem('conductor_user_role', authData.user?.role || 'OWNER');
+            setUserRole(authData.user?.role || 'OWNER');
           }
         }
       } catch (err) {

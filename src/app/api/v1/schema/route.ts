@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { SchemaManagerService, SchemaDomain } from '@/core/schema/schema-manager.service';
+import { SchemaManagerService, SchemaDomain, SchemaDataType } from '@/core/schema/schema-manager.service';
 
 export async function GET(request: Request) {
   try {
@@ -11,6 +11,7 @@ export async function GET(request: Request) {
       totalFields: fields.length,
       customFieldsCount: fields.filter(f => f.isCustom).length,
       standardFieldsCount: fields.filter(f => !f.isCustom).length,
+      customizedStandardCount: fields.filter(f => !f.isCustom && f.isOverride).length,
     };
 
     return NextResponse.json({
@@ -62,6 +63,66 @@ export async function POST(request: Request) {
   }
 }
 
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json();
+    const { oldId, id, domain, label, dataType, description, options, defaultValue, required, resetToDefault } = body;
+
+    if (!oldId) {
+      return NextResponse.json(
+        { success: false, error: 'Original parameter ID (oldId) is required for updates.' },
+        { status: 400 }
+      );
+    }
+
+    if (resetToDefault) {
+      const reset = await SchemaManagerService.resetFieldToDefault(oldId);
+      return NextResponse.json({
+        success: true,
+        message: reset ? `Parameter '${oldId}' reset to default.` : 'No custom override to reset.',
+      });
+    }
+
+    if (!label) {
+      return NextResponse.json(
+        { success: false, error: 'Parameter label / name is required.' },
+        { status: 400 }
+      );
+    }
+
+    const result = await SchemaManagerService.updateField(oldId, {
+      id,
+      domain: domain as SchemaDomain,
+      label,
+      dataType: dataType as SchemaDataType,
+      description,
+      options,
+      defaultValue,
+      required: !!required,
+    });
+
+    const msg = result.recordsMigrated > 0
+      ? `Parameter '${result.field.label}' updated successfully and migrated ${result.recordsMigrated} data record(s) in real time.`
+      : `Parameter '${result.field.label}' updated successfully.`;
+
+    return NextResponse.json({
+      success: true,
+      message: msg,
+      field: result.field,
+      recordsMigrated: result.recordsMigrated,
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to update schema parameter' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: Request) {
+  return PUT(request);
+}
+
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -77,14 +138,14 @@ export async function DELETE(request: Request) {
     const deleted = await SchemaManagerService.deleteField(id);
     if (!deleted) {
       return NextResponse.json(
-        { success: false, error: `Custom parameter '${id}' not found or is a protected standard field.` },
+        { success: false, error: `Parameter '${id}' not found.` },
         { status: 404 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      message: `Custom parameter '${id}' removed successfully.`,
+      message: `Parameter '${id}' removed / reset successfully.`,
     });
   } catch (error: any) {
     return NextResponse.json(

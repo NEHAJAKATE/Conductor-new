@@ -201,6 +201,21 @@
   background: rgba(30, 41, 59, 0.5);
 }
 
+.rule-actions { display: flex; align-items: center; gap: 0.25rem; }
+.icon-action-btn { background: transparent; border: 1px solid transparent; color: #94a3b8; border-radius: 6px; padding: 0.35rem; cursor: pointer; display: inline-flex; align-items: center; }
+.icon-action-btn:hover { background: #1e293b; color: #f8fafc; border-color: #334155; }
+.icon-action-btn.danger:hover { color: #f87171; border-color: rgba(248, 113, 113, 0.4); }
+.rule-editor { max-width: 760px; }
+.rule-editor h2 { margin: 0; color: #f8fafc; font-size: 1.2rem; }
+.rule-editor .modal-header p { margin: 0.35rem 0 0; color: #94a3b8; font-size: 0.85rem; }
+.rule-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; padding: 1.5rem; }
+.rule-form-grid label { display: flex; flex-direction: column; gap: 0.4rem; color: #cbd5e1; font-size: 0.8rem; font-weight: 600; }
+.rule-form-grid input, .rule-form-grid select, .rule-form-grid textarea { width: 100%; box-sizing: border-box; background: #0b0f19; border: 1px solid #334155; border-radius: 7px; color: #f8fafc; padding: 0.65rem 0.75rem; font: inherit; font-weight: 400; }
+.rule-form-grid textarea { min-height: 78px; resize: vertical; }
+.rule-form-grid .full-width { grid-column: 1 / -1; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1rem 1.5rem 1.5rem; border-top: 1px solid #1e293b; }
+@media (max-width: 700px) { .rule-form-grid { grid-template-columns: 1fr; } .rule-form-grid .full-width { grid-column: auto; } }
+
 .badge {
   display: inline-flex;
   align-items: center;

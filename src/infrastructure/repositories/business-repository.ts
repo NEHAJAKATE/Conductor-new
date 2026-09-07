@@ -41,6 +41,15 @@ export class BusinessRepository {
     this.loadFromDisk();
   }
 
+  public reloadFromDisk() {
+    this.businesses.clear();
+    this.gstinIndex.clear();
+    this.panIndex.clear();
+    this.nameIndex.clear();
+    this.ledgerIndex.clear();
+    this.loadFromDisk();
+  }
+
   private loadFromDisk() {
     try {
       if (fs.existsSync(this.filePath)) {
@@ -60,7 +69,9 @@ export class BusinessRepository {
     try {
       ensureReadyDir();
       const list = Array.from(this.businesses.values());
-      await fs.promises.writeFile(this.filePath, JSON.stringify(list, null, 2), 'utf8');
+      const tempPath = `${this.filePath}.${Date.now()}.${Math.random().toString(36).substring(7)}.tmp`;
+      await fs.promises.writeFile(tempPath, JSON.stringify(list, null, 2), 'utf8');
+      await fs.promises.rename(tempPath, this.filePath);
     } catch (err) {
       console.error('[BusinessRepository] Failed to persist to disk:', err);
     }

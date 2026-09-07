@@ -1,11 +1,18 @@
 /**
  * Schema Manager Service
  * Provides an editable schema registry for non-technical users (owners/operators).
- * Allows adding, updating, and removing custom parameters per domain without code changes.
+ * Allows adding, updating, renaming, and removing custom parameters per domain without code changes.
+ * Supports real-time cascading migration across canonical data stores when parameters are renamed.
  */
 
 import fs from 'fs';
 import path from 'path';
+import { businessRepository } from '@/infrastructure/repositories/business-repository';
+import {
+  transactionRepository,
+  inventoryRepository,
+  outstandingRepository,
+} from '@/infrastructure/repositories/canonical-repositories';
 
 export type SchemaDomain = 'business' | 'transaction' | 'inventory' | 'outstanding' | 'payment';
 export type SchemaDataType = 'text' | 'number' | 'boolean' | 'date' | 'currency' | 'select';
@@ -20,6 +27,8 @@ export interface SchemaFieldDefinition {
   defaultValue?: any;
   required?: boolean;
   isCustom: boolean; // true = user-defined, false = built-in ERP standard
+  isOverride?: boolean; // true if standard field label/description was customized by company owner
+  originalLabel?: string; // Standard default label before owner rename
   createdAt: string;
 }
 
@@ -74,6 +83,7 @@ const STANDARD_FIELDS: SchemaFieldDefinition[] = [
 
 export class SchemaManagerService {
   private static customFields: Map<string, SchemaFieldDefinition> = new Map();
+  private static standardOverrides: Map<string, Partial<SchemaFieldDefinition>> = new Map();
   private static loaded = false;
 
   private static load() {
@@ -83,7 +93,13 @@ export class SchemaManagerService {
       if (fs.existsSync(SCHEMA_FILE)) {
         const raw = fs.readFileSync(SCHEMA_FILE, 'utf8');
         const list: SchemaFieldDefinition[] = JSON.parse(raw);
-        list.forEach(f => this.customFields.set(f.id, f));
+        list.forEach(f => {
+          if (f.isCustom) {
+            this.customFields.set(f.id, f);
+          } else if (f.isOverride) {
+            this.standardOverrides.set(f.id, f);
+          }
+        });
       }
     } catch (err) {
       console.error('[SchemaManagerService] Failed to load custom schema:', err);
@@ -93,17 +109,33 @@ export class SchemaManagerService {
 
   private static async persist() {
     ensureReadyDir();
-    const list = Array.from(this.customFields.values());
-    await fs.promises.writeFile(SCHEMA_FILE, JSON.stringify(list, null, 2), 'utf8');
+    const customList = Array.from(this.customFields.values());
+    const overrideList = Array.from(this.standardOverrides.values());
+    const combined = [...customList, ...overrideList];
+    await fs.promises.writeFile(SCHEMA_FILE, JSON.stringify(combined, null, 2), 'utf8');
   }
 
   /**
-   * List all schema parameters (both standard and user-defined custom fields)
+   * List all schema parameters (both standard with owner overrides and user-defined custom fields)
    */
   public static listFields(domain?: SchemaDomain): SchemaFieldDefinition[] {
     this.load();
+    const standardMerged = STANDARD_FIELDS.map(std => {
+      const override = this.standardOverrides.get(std.id);
+      if (override) {
+        return {
+          ...std,
+          label: override.label || std.label,
+          description: override.description !== undefined ? override.description : std.description,
+          isOverride: true,
+          originalLabel: std.label,
+        };
+      }
+      return std;
+    });
+
     const customList = Array.from(this.customFields.values());
-    const all = [...STANDARD_FIELDS, ...customList];
+    const all = [...standardMerged, ...customList];
     if (domain) {
       return all.filter(f => f.domain === domain);
     }
@@ -134,6 +166,10 @@ export class SchemaManagerService {
       throw new Error('Parameter ID must contain alphanumeric characters.');
     }
 
+    if (STANDARD_FIELDS.some(s => s.id === cleanId) || this.customFields.has(cleanId)) {
+      throw new Error(`A parameter with key '${cleanId}' already exists.`);
+    }
+
     const field: SchemaFieldDefinition = {
       id: cleanId,
       domain: params.domain,
@@ -153,12 +189,229 @@ export class SchemaManagerService {
   }
 
   /**
-   * Delete a custom user-defined parameter
+   * Edit or Rename an existing schema parameter
+   * - If standard field: updates company display label and description overrides
+   * - If custom field: updates label, dataType, description, and if key changed (oldId !== newId),
+   *   migrates all existing data records in real-time across data/ready/*.json
+   */
+  public static async updateField(
+    oldId: string,
+    updates: {
+      id?: string;
+      label?: string;
+      domain?: SchemaDomain;
+      dataType?: SchemaDataType;
+      description?: string;
+      options?: string[];
+      defaultValue?: any;
+      required?: boolean;
+    }
+  ): Promise<{ field: SchemaFieldDefinition; recordsMigrated: number }> {
+    this.load();
+
+    const stdMatch = STANDARD_FIELDS.find(s => s.id === oldId);
+
+    // Case 1: Editing standard ERP field terminology / display label
+    if (stdMatch) {
+      const newLabel = updates.label?.trim() || stdMatch.label;
+      const newDesc = updates.description !== undefined ? updates.description.trim() : stdMatch.description;
+
+      const override: SchemaFieldDefinition = {
+        id: oldId,
+        domain: stdMatch.domain,
+        label: newLabel,
+        dataType: stdMatch.dataType,
+        description: newDesc,
+        isCustom: false,
+        isOverride: true,
+        originalLabel: stdMatch.label,
+        createdAt: stdMatch.createdAt,
+      };
+
+      this.standardOverrides.set(oldId, override);
+      await this.persist();
+      return { field: override, recordsMigrated: 0 };
+    }
+
+    // Case 2: Editing a custom user-defined parameter
+    const existingCustom = this.customFields.get(oldId);
+    if (!existingCustom) {
+      throw new Error(`Schema parameter '${oldId}' not found.`);
+    }
+
+    const cleanNewId = updates.id
+      ? updates.id.toLowerCase().trim().replace(/[^a-z0-9_]/g, '_')
+      : oldId;
+
+    if (!cleanNewId) {
+      throw new Error('Parameter key cannot be empty.');
+    }
+
+    if (cleanNewId !== oldId) {
+      // Ensure target key does not collide with existing fields
+      if (STANDARD_FIELDS.some(s => s.id === cleanNewId) || this.customFields.has(cleanNewId)) {
+        throw new Error(`A parameter with key '${cleanNewId}' already exists.`);
+      }
+    }
+
+    const updatedField: SchemaFieldDefinition = {
+      ...existingCustom,
+      id: cleanNewId,
+      domain: updates.domain || existingCustom.domain,
+      label: updates.label?.trim() || existingCustom.label,
+      dataType: updates.dataType || existingCustom.dataType,
+      description: updates.description !== undefined ? updates.description.trim() : existingCustom.description,
+      options: updates.options || existingCustom.options,
+      defaultValue: updates.defaultValue !== undefined ? updates.defaultValue : existingCustom.defaultValue,
+      required: updates.required !== undefined ? updates.required : existingCustom.required,
+    };
+
+    let recordsMigrated = 0;
+
+    // If key ID changed, perform real-time data migration across all ready data files
+    if (cleanNewId !== oldId) {
+      this.customFields.delete(oldId);
+      this.customFields.set(cleanNewId, updatedField);
+      recordsMigrated = await this.migrateAttributeKeyInData(oldId, cleanNewId);
+    } else {
+      this.customFields.set(oldId, updatedField);
+    }
+
+    await this.persist();
+    return { field: updatedField, recordsMigrated };
+  }
+
+  /**
+   * Reset a customized standard field label back to system default
+   */
+  public static async resetFieldToDefault(id: string): Promise<boolean> {
+    this.load();
+    if (this.standardOverrides.has(id)) {
+      this.standardOverrides.delete(id);
+      await this.persist();
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Cascade real-time attribute key rename across all stored entities in data/ready/
+   */
+  private static async migrateAttributeKeyInData(oldKey: string, newKey: string): Promise<number> {
+    let totalMigrated = 0;
+    ensureReadyDir();
+
+    // 1. Businesses
+    const bizPath = path.join(READY_DIR, 'businesses.json');
+    if (fs.existsSync(bizPath)) {
+      try {
+        const raw = await fs.promises.readFile(bizPath, 'utf8');
+        const list = JSON.parse(raw);
+        let changed = false;
+        list.forEach((b: any) => {
+          if (b.customAttributes && oldKey in b.customAttributes) {
+            b.customAttributes[newKey] = b.customAttributes[oldKey];
+            delete b.customAttributes[oldKey];
+            changed = true;
+            totalMigrated++;
+          }
+        });
+        if (changed) {
+          await fs.promises.writeFile(bizPath, JSON.stringify(list, null, 2), 'utf8');
+          businessRepository.reloadFromDisk();
+        }
+      } catch (err) {
+        console.error('[SchemaManagerService] Failed migrating businesses.json:', err);
+      }
+    }
+
+    // 2. Transactions
+    const txPath = path.join(READY_DIR, 'transactions.json');
+    if (fs.existsSync(txPath)) {
+      try {
+        const raw = await fs.promises.readFile(txPath, 'utf8');
+        const list = JSON.parse(raw);
+        let changed = false;
+        list.forEach((t: any) => {
+          if (t.customAttributes && oldKey in t.customAttributes) {
+            t.customAttributes[newKey] = t.customAttributes[oldKey];
+            delete t.customAttributes[oldKey];
+            changed = true;
+            totalMigrated++;
+          }
+        });
+        if (changed) {
+          await fs.promises.writeFile(txPath, JSON.stringify(list, null, 2), 'utf8');
+          transactionRepository.reloadFromDisk();
+        }
+      } catch (err) {
+        console.error('[SchemaManagerService] Failed migrating transactions.json:', err);
+      }
+    }
+
+    // 3. Inventory
+    const invPath = path.join(READY_DIR, 'inventory.json');
+    if (fs.existsSync(invPath)) {
+      try {
+        const raw = await fs.promises.readFile(invPath, 'utf8');
+        const list = JSON.parse(raw);
+        let changed = false;
+        list.forEach((i: any) => {
+          if (i.customAttributes && oldKey in i.customAttributes) {
+            i.customAttributes[newKey] = i.customAttributes[oldKey];
+            delete i.customAttributes[oldKey];
+            changed = true;
+            totalMigrated++;
+          }
+        });
+        if (changed) {
+          await fs.promises.writeFile(invPath, JSON.stringify(list, null, 2), 'utf8');
+          inventoryRepository.reloadFromDisk();
+        }
+      } catch (err) {
+        console.error('[SchemaManagerService] Failed migrating inventory.json:', err);
+      }
+    }
+
+    // 4. Outstanding
+    const outPath = path.join(READY_DIR, 'outstanding.json');
+    if (fs.existsSync(outPath)) {
+      try {
+        const raw = await fs.promises.readFile(outPath, 'utf8');
+        const list = JSON.parse(raw);
+        let changed = false;
+        list.forEach((o: any) => {
+          if (o.customAttributes && oldKey in o.customAttributes) {
+            o.customAttributes[newKey] = o.customAttributes[oldKey];
+            delete o.customAttributes[oldKey];
+            changed = true;
+            totalMigrated++;
+          }
+        });
+        if (changed) {
+          await fs.promises.writeFile(outPath, JSON.stringify(list, null, 2), 'utf8');
+          outstandingRepository.reloadFromDisk();
+        }
+      } catch (err) {
+        console.error('[SchemaManagerService] Failed migrating outstanding.json:', err);
+      }
+    }
+
+    return totalMigrated;
+  }
+
+  /**
+   * Delete a custom user-defined parameter or reset standard override
    */
   public static async deleteField(id: string): Promise<boolean> {
     this.load();
     if (this.customFields.has(id)) {
       this.customFields.delete(id);
+      await this.persist();
+      return true;
+    }
+    if (this.standardOverrides.has(id)) {
+      this.standardOverrides.delete(id);
       await this.persist();
       return true;
     }

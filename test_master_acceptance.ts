@@ -1,5 +1,8 @@
 import path from 'path';
 import fs from 'fs';
+
+process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'atc_conductor_prod_session_secret_98a76d54f3b21e0c98e74a5b6c7d8e9f';
+
 import { ErpAdapter } from './src/core/adapters/erp-adapter';
 import { ReportService } from './src/core/reports/report.service';
 import { InventoryLedgerService } from './src/core/inventory/inventory-ledger.service';

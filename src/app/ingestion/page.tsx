@@ -493,7 +493,10 @@ export default function IngestionPage() {
           <div className="header-breadcrumbs">
             <span className="muted">Platform</span> / <span className="active-breadcrumb">Data Ingestion</span>
           </div>
-          <div className="header-actions">
+          <div className="header-actions" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <button className="theme-toggle-btn" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.4)', color: '#60a5fa' }} onClick={() => setIsSchemaStudioOpen(true)}>
+              <Database size={14} /> Schema Studio
+            </button>
             <button className="theme-toggle-btn" style={{ display: 'flex', alignItems: 'center', gap: '6px' }} onClick={() => setShowHelpCenter(s => !s)}>
               <HelpCircle size={14} /> Help Center
             </button>

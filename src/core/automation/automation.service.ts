@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+
 export interface AutomationRule {
   id: string;
   name: string;
@@ -27,6 +30,8 @@ export interface AutomationExecutionLog {
   actionTaken: string;
   status: 'SENT' | 'FAILED';
 }
+
+export type AutomationRuleInput = Omit<AutomationRule, 'id' | 'executionCount' | 'lastTriggeredAt'>;
 
 export class AutomationService {
   private rules: AutomationRule[] = [
@@ -109,6 +114,36 @@ export class AutomationService {
 
   private logs: AutomationExecutionLog[] = [];
 
+  constructor() {
+    this.loadRules();
+  }
+
+  private getRulesPath() {
+    return path.join(process.cwd(), 'data', 'ready', 'automation_rules.json');
+  }
+
+  private loadRules() {
+    try {
+      const rulesPath = this.getRulesPath();
+      if (fs.existsSync(rulesPath)) {
+        const savedRules = JSON.parse(fs.readFileSync(rulesPath, 'utf8')) as AutomationRule[];
+        if (Array.isArray(savedRules) && savedRules.length > 0) this.rules = savedRules;
+      }
+    } catch (error) {
+      console.error('[AutomationService] Failed to load saved rules:', error);
+    }
+  }
+
+  private async persistRules() {
+    try {
+      const rulesPath = this.getRulesPath();
+      await fs.promises.mkdir(path.dirname(rulesPath), { recursive: true });
+      await fs.promises.writeFile(rulesPath, JSON.stringify(this.rules, null, 2), 'utf8');
+    } catch (error) {
+      console.error('[AutomationService] Failed to persist rules:', error);
+    }
+  }
+
   async listRules(): Promise<AutomationRule[]> {
     return this.rules;
   }
@@ -117,8 +152,43 @@ export class AutomationService {
     const rule = this.rules.find(r => r.id === ruleId);
     if (rule) {
       rule.enabled = !rule.enabled;
+      await this.persistRules();
     }
     return rule;
+  }
+
+  async createRule(input: AutomationRuleInput): Promise<AutomationRule> {
+    const rule: AutomationRule = {
+      ...input,
+      id: `rule-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      executionCount: 0,
+    };
+    this.rules.push(rule);
+    await this.persistRules();
+    return rule;
+  }
+
+  async updateRule(ruleId: string, input: AutomationRuleInput): Promise<AutomationRule | undefined> {
+    const index = this.rules.findIndex(rule => rule.id === ruleId);
+    if (index === -1) return undefined;
+    const existing = this.rules[index];
+    const updated: AutomationRule = {
+      ...input,
+      id: existing.id,
+      executionCount: existing.executionCount,
+      lastTriggeredAt: existing.lastTriggeredAt,
+    };
+    this.rules[index] = updated;
+    await this.persistRules();
+    return updated;
+  }
+
+  async deleteRule(ruleId: string): Promise<boolean> {
+    const initialLength = this.rules.length;
+    this.rules = this.rules.filter(rule => rule.id !== ruleId);
+    if (this.rules.length === initialLength) return false;
+    await this.persistRules();
+    return true;
   }
 
   async listLogs(): Promise<AutomationExecutionLog[]> {

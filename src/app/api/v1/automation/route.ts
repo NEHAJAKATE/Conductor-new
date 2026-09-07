@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { automationService } from '@/core/automation/automation.service';
+import { automationService, AutomationRuleInput } from '@/core/automation/automation.service';
 
 export async function GET() {
   try {
@@ -20,6 +20,25 @@ export async function POST(request: NextRequest) {
     if (action === 'toggle' && body.ruleId) {
       const updated = await automationService.toggleRule(body.ruleId);
       return NextResponse.json({ rule: updated }, { status: 200 });
+    }
+
+    if (action === 'create' || action === 'update') {
+      const input = body.rule as AutomationRuleInput;
+      if (!input?.name || !input.description || !input.triggerType || !input.condition?.field || !input.action?.recipient) {
+        return NextResponse.json({ message: 'Rule name, description, trigger, condition, and recipient are required' }, { status: 400 });
+      }
+      const rule = action === 'create'
+        ? await automationService.createRule(input)
+        : await automationService.updateRule(body.ruleId, input);
+      if (!rule) return NextResponse.json({ message: 'Rule not found' }, { status: 404 });
+      return NextResponse.json({ rule }, { status: action === 'create' ? 201 : 200 });
+    }
+
+    if (action === 'delete' && body.ruleId) {
+      const deleted = await automationService.deleteRule(body.ruleId);
+      return deleted
+        ? NextResponse.json({ success: true }, { status: 200 })
+        : NextResponse.json({ message: 'Rule not found' }, { status: 404 });
     }
 
     if (action === 'send_reminder' || action === 'test_trigger') {

@@ -9,8 +9,14 @@ import {
   Layers, 
   Tag, 
   HelpCircle,
-  AlertCircle
+  AlertCircle,
+  Search,
+  Pencil,
+  RotateCcw,
+  Sparkles,
+  Info
 } from 'lucide-react';
+import './schema-studio-modal.css';
 
 export interface SchemaField {
   id: string;
@@ -22,6 +28,8 @@ export interface SchemaField {
   defaultValue?: any;
   required?: boolean;
   isCustom: boolean;
+  isOverride?: boolean;
+  originalLabel?: string;
   createdAt: string;
 }
 
@@ -43,6 +51,16 @@ export default function SchemaStudioModal({ isOpen, onClose }: SchemaStudioModal
   const [newDomain, setNewDomain] = useState<'business' | 'transaction' | 'inventory' | 'outstanding' | 'payment'>('business');
   const [newDataType, setNewDataType] = useState<'text' | 'number' | 'boolean' | 'date' | 'currency'>('text');
   const [newDescription, setNewDescription] = useState('');
+
+  // Edit Field Modal Form State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingField, setEditingField] = useState<SchemaField | null>(null);
+  const [editId, setEditId] = useState('');
+  const [editLabel, setEditLabel] = useState('');
+  const [editDomain, setEditDomain] = useState<'business' | 'transaction' | 'inventory' | 'outstanding' | 'payment'>('business');
+  const [editDataType, setEditDataType] = useState<'text' | 'number' | 'boolean' | 'date' | 'currency'>('text');
+  const [editDescription, setEditDescription] = useState('');
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -109,6 +127,93 @@ export default function SchemaStudioModal({ isOpen, onClose }: SchemaStudioModal
     }
   };
 
+  const handleOpenEdit = (field: SchemaField) => {
+    setEditingField(field);
+    setEditId(field.id);
+    setEditLabel(field.label);
+    setEditDomain(field.domain);
+    setEditDataType((field.dataType as any) || 'text');
+    setEditDescription(field.description || '');
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingField || !editLabel.trim()) return;
+
+    try {
+      setIsSubmitting(true);
+      setStatusMessage(null);
+
+      const finalId = editingField.isCustom && editId.trim()
+        ? editId.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_')
+        : editingField.id;
+
+      const res = await fetch('/api/v1/schema', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          oldId: editingField.id,
+          id: finalId,
+          domain: editDomain,
+          label: editLabel.trim(),
+          dataType: editDataType,
+          description: editDescription.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setStatusMessage({ 
+          type: 'success', 
+          text: data.message || `Parameter '${editLabel}' updated successfully!` 
+        });
+        setIsEditModalOpen(false);
+        setEditingField(null);
+        fetchFields();
+      } else {
+        setStatusMessage({ type: 'error', text: data.error || 'Failed to update parameter' });
+      }
+    } catch (err: any) {
+      setStatusMessage({ type: 'error', text: err.message || 'Network error' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResetToDefault = async (field: SchemaField) => {
+    if (!confirm(`Reset parameter name back to default ERP name '${field.originalLabel || field.id}'?`)) return;
+
+    try {
+      setIsSubmitting(true);
+      setStatusMessage(null);
+      const res = await fetch('/api/v1/schema', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          oldId: field.id,
+          resetToDefault: true,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setStatusMessage({ type: 'success', text: `Parameter '${field.id}' reset to standard default label.` });
+        if (isEditModalOpen) {
+          setIsEditModalOpen(false);
+          setEditingField(null);
+        }
+        fetchFields();
+      } else {
+        setStatusMessage({ type: 'error', text: data.error || 'Failed to reset parameter' });
+      }
+    } catch (err: any) {
+      setStatusMessage({ type: 'error', text: err.message || 'Network error' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleDeleteField = async (id: string, label: string) => {
     if (!confirm(`Are you sure you want to remove custom parameter '${label}'?`)) return;
 
@@ -117,6 +222,7 @@ export default function SchemaStudioModal({ isOpen, onClose }: SchemaStudioModal
         method: 'DELETE',
       });
       if (res.ok) {
+        setStatusMessage({ type: 'success', text: `Parameter '${label}' removed successfully.` });
         fetchFields();
       }
     } catch (err) {
@@ -132,71 +238,63 @@ export default function SchemaStudioModal({ isOpen, onClose }: SchemaStudioModal
     const matchesSearch = !q || 
       f.label.toLowerCase().includes(q) || 
       f.id.toLowerCase().includes(q) || 
+      (f.originalLabel && f.originalLabel.toLowerCase().includes(q)) ||
       (f.description && f.description.toLowerCase().includes(q));
     return matchesDomain && matchesSearch;
   });
 
   const getDomainBadge = (dom: string) => {
     switch (dom) {
-      case 'business': return <span className="badge badge-success">Business 360</span>;
-      case 'transaction': return <span className="badge badge-info">Transactions</span>;
-      case 'inventory': return <span className="badge badge-warning">Inventory</span>;
-      case 'outstanding': return <span className="badge" style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)', color: '#f87171' }}>Outstanding</span>;
-      default: return <span className="badge badge-neutral">{dom}</span>;
+      case 'business': return <span className="schema-badge business">Business 360</span>;
+      case 'transaction': return <span className="schema-badge transaction">Transactions</span>;
+      case 'inventory': return <span className="schema-badge inventory">Inventory</span>;
+      case 'outstanding': return <span className="schema-badge outstanding">Outstanding</span>;
+      case 'payment': return <span className="schema-badge payment">Bank & Cash</span>;
+      default: return <span className="schema-badge standard">{dom}</span>;
     }
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose} style={{ zIndex: 1000 }}>
+    <div className="schema-studio-backdrop" onClick={onClose}>
       <div 
-        className="modal-content" 
+        className="schema-studio-container" 
         onClick={e => e.stopPropagation()}
-        style={{ maxWidth: '900px', width: '95%', maxHeight: '88vh', display: 'flex', flexDirection: 'column' }}
       >
         {/* Header */}
-        <div className="modal-header" style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--grid-line-major)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'rgba(96, 165, 250, 0.1)', color: '#60a5fa' }}>
+        <div className="schema-studio-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div className="schema-studio-icon">
               <Database size={22} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#fff', fontWeight: 600 }}>
+              <h3 className="schema-studio-title">
                 Editable Schema & Data Dictionary
               </h3>
-              <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8' }}>
-                Define and customize parameters so future Excel/CSV report uploads are seamlessly mapped without dropping data.
+              <p className="schema-studio-subtitle">
+                Customize parameter names as per your company terminology. Renaming updates all views and datasets in real time.
               </p>
             </div>
           </div>
           <button 
+            className="schema-close-btn"
             onClick={onClose}
-            style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+            aria-label="Close Schema Studio"
           >
             <X size={20} />
           </button>
         </div>
 
         {/* Action Controls Bar */}
-        <div style={{ padding: '1rem 1.5rem', background: 'rgba(255, 255, 255, 0.02)', borderBottom: '1px solid var(--grid-line-major)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+        <div className="schema-toolbar">
           {/* Domain Tabs */}
-          <div style={{ display: 'flex', gap: '6px', overflowX: 'auto' }}>
+          <div className="schema-tab-group">
             {(['all', 'business', 'transaction', 'inventory', 'outstanding'] as const).map(d => (
               <button
                 key={d}
                 onClick={() => setSelectedDomain(d)}
-                style={{
-                  padding: '5px 12px',
-                  borderRadius: '6px',
-                  fontSize: '0.8rem',
-                  fontWeight: selectedDomain === d ? 600 : 400,
-                  backgroundColor: selectedDomain === d ? 'var(--accent-primary)' : 'rgba(255,255,255,0.05)',
-                  color: selectedDomain === d ? '#000' : 'var(--text-muted)',
-                  border: '1px solid var(--grid-line-major)',
-                  cursor: 'pointer',
-                  textTransform: 'capitalize'
-                }}
+                className={`schema-tab-btn ${selectedDomain === d ? 'active' : ''}`}
               >
-                {d === 'all' ? 'All Domains' : d === 'business' ? 'Business 360' : d}
+                {d === 'all' ? 'All Domains' : d === 'business' ? 'Business 360' : d.charAt(0).toUpperCase() + d.slice(1)}
               </button>
             ))}
           </div>
@@ -204,23 +302,14 @@ export default function SchemaStudioModal({ isOpen, onClose }: SchemaStudioModal
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <input 
               type="text" 
-              placeholder="Search parameters..." 
+              placeholder="Search parameters or keys..." 
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              style={{
-                background: 'var(--bg-app)',
-                border: '1px solid var(--grid-line-major)',
-                color: 'var(--text-loud)',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                fontSize: '0.8rem',
-                width: '180px'
-              }}
+              className="schema-search-input"
             />
             <button 
-              className="btn-primary" 
+              className="schema-btn-submit" 
               onClick={() => setIsAddModalOpen(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '6px 14px', height: '32px' }}
             >
               <Plus size={15} />
               <span>Add Custom Parameter</span>
@@ -231,12 +320,12 @@ export default function SchemaStudioModal({ isOpen, onClose }: SchemaStudioModal
         {/* Notifications */}
         {statusMessage && (
           <div style={{ 
-            margin: '0.75rem 1.5rem 0',
-            padding: '8px 14px', 
-            borderRadius: '6px', 
+            margin: '0.75rem 1.75rem 0',
+            padding: '10px 14px', 
+            borderRadius: '8px', 
             fontSize: '0.85rem',
-            backgroundColor: statusMessage.type === 'success' ? 'rgba(52, 211, 153, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-            border: `1px solid ${statusMessage.type === 'success' ? '#10b981' : '#ef4444'}`,
+            backgroundColor: statusMessage.type === 'success' ? 'rgba(52, 211, 153, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+            border: `1px solid ${statusMessage.type === 'success' ? 'rgba(52, 211, 153, 0.4)' : 'rgba(239, 68, 68, 0.4)'}`,
             color: statusMessage.type === 'success' ? '#34d399' : '#f87171',
             display: 'flex',
             alignItems: 'center',
@@ -248,91 +337,114 @@ export default function SchemaStudioModal({ isOpen, onClose }: SchemaStudioModal
         )}
 
         {/* Table Content */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 1.5rem' }}>
-          <table className="business-table" style={{ width: '100%' }}>
+        <div className="schema-table-wrapper">
+          <table className="schema-data-table">
             <thead>
               <tr>
-                <th>Parameter Label</th>
-                <th>Target Domain</th>
-                <th>Data Type</th>
-                <th>Field Key</th>
-                <th>Origin</th>
-                <th style={{ textAlign: 'right' }}>Actions</th>
+                <th style={{ width: '30%' }}>Parameter Name (Click ✏️ to Rename)</th>
+                <th style={{ width: '15%' }}>Domain</th>
+                <th style={{ width: '13%' }}>Data Type</th>
+                <th style={{ width: '18%' }}>Field Key</th>
+                <th style={{ width: '12%' }}>Origin</th>
+                <th style={{ width: '12%', textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
                     Loading schema definitions...
                   </td>
                 </tr>
               ) : filteredFields.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
                     No parameters found matching your filter.
                   </td>
                 </tr>
               ) : (
                 filteredFields.map(f => (
-                  <tr key={`${f.domain}-${f.id}`}>
+                  <tr key={`${f.domain}-${f.id}`} className={f.isOverride ? 'schema-row-customized' : ''}>
                     <td>
-                      <div style={{ fontWeight: 600, color: '#f8fafc' }}>{f.label}</div>
+                      <div className="schema-param-title-row">
+                        <span className="schema-param-title">{f.label}</span>
+                        <button 
+                          className="schema-inline-edit-btn" 
+                          onClick={() => handleOpenEdit(f)}
+                          title={`Rename '${f.label}' as per company requirement`}
+                          aria-label={`Edit ${f.label}`}
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        {f.isOverride && (
+                          <span className="schema-badge renamed" title={`Standard ERP Name: ${f.originalLabel}`}>
+                            Custom Term
+                          </span>
+                        )}
+                      </div>
                       {f.description && (
-                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{f.description}</div>
+                        <div className="schema-param-desc">{f.description}</div>
+                      )}
+                      {f.isOverride && f.originalLabel && (
+                        <div className="schema-param-original">
+                          Standard ERP Default: <span>{f.originalLabel}</span>
+                        </div>
                       )}
                     </td>
                     <td>{getDomainBadge(f.domain)}</td>
                     <td>
-                      <span style={{ 
-                        fontSize: '0.75rem', 
-                        padding: '2px 8px', 
-                        borderRadius: '4px', 
-                        backgroundColor: 'rgba(255,255,255,0.05)',
-                        fontFamily: 'monospace',
-                        color: '#38bdf8'
-                      }}>
+                      <span className="schema-type-pill">
                         {f.dataType.toUpperCase()}
                       </span>
                     </td>
                     <td>
-                      <code style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{f.id}</code>
+                      <code className="schema-code-key">{f.id}</code>
                     </td>
                     <td>
                       {f.isCustom ? (
-                        <span className="badge" style={{ backgroundColor: 'rgba(168, 85, 247, 0.2)', color: '#c084fc', border: '1px solid #a855f7' }}>
-                          Custom (User)
+                        <span className="schema-badge custom">
+                          Custom
+                        </span>
+                      ) : f.isOverride ? (
+                        <span className="schema-badge standard-modified">
+                          Standard (Renamed)
                         </span>
                       ) : (
-                        <span className="badge badge-neutral" style={{ fontSize: '0.75rem' }}>
+                        <span className="schema-badge standard">
                           Standard ERP
                         </span>
                       )}
                     </td>
                     <td style={{ textAlign: 'right' }}>
-                      {f.isCustom ? (
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end' }}>
                         <button
-                          onClick={() => handleDeleteField(f.id, f.label)}
-                          style={{
-                            background: 'transparent',
-                            border: 'none',
-                            color: '#f87171',
-                            cursor: 'pointer',
-                            padding: '4px 8px',
-                            borderRadius: '4px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            fontSize: '0.75rem'
-                          }}
-                          title="Delete Custom Parameter"
+                          onClick={() => handleOpenEdit(f)}
+                          className="schema-action-btn edit"
+                          title="Edit parameter name or settings"
                         >
-                          <Trash2 size={14} />
-                          <span>Remove</span>
+                          <Pencil size={12} />
+                          <span>Edit</span>
                         </button>
-                      ) : (
-                        <span style={{ fontSize: '0.75rem', color: '#475569' }}>Protected</span>
-                      )}
+                        {f.isCustom ? (
+                          <button
+                            onClick={() => handleDeleteField(f.id, f.label)}
+                            className="schema-action-btn delete"
+                            title="Delete Custom Parameter"
+                          >
+                            <Trash2 size={12} />
+                            <span>Remove</span>
+                          </button>
+                        ) : f.isOverride ? (
+                          <button
+                            onClick={() => handleResetToDefault(f)}
+                            className="schema-action-btn reset"
+                            title="Reset to default ERP terminology"
+                          >
+                            <RotateCcw size={12} />
+                            <span>Reset</span>
+                          </button>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -341,45 +453,208 @@ export default function SchemaStudioModal({ isOpen, onClose }: SchemaStudioModal
           </table>
         </div>
 
+        {/* Edit / Rename Parameter Sub-Modal */}
+        {isEditModalOpen && editingField && (
+          <div 
+            className="schema-add-backdrop"
+            onClick={() => setIsEditModalOpen(false)}
+          >
+            <div 
+              className="schema-add-dialog"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="schema-add-header">
+                <div>
+                  <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Pencil size={16} color="#60a5fa" />
+                    <span>Edit & Rename Schema Parameter</span>
+                  </h4>
+                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '3px' }}>
+                    Domain: <strong style={{ color: '#e2e8f0', textTransform: 'capitalize' }}>{editingField.domain}</strong>
+                    {editingField.isCustom ? ' (Custom Field)' : ' (Standard ERP Field)'}
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsEditModalOpen(false)} 
+                  className="schema-close-btn"
+                  aria-label="Close edit form"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveEdit}>
+                <div className="schema-form-group">
+                  <label className="schema-form-label">
+                    Parameter Display Name / Label *
+                    <span style={{ fontSize: '0.75rem', fontWeight: 'normal', color: '#94a3b8', marginLeft: '6px' }}>
+                      (How your company terms it)
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Customer Name, Doctor Specialty, WhatsApp Opt-in"
+                    value={editLabel}
+                    onChange={e => setEditLabel(e.target.value)}
+                    className="schema-form-input"
+                    autoFocus
+                  />
+                  {editingField.originalLabel && editingField.originalLabel !== editLabel && (
+                    <div style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '4px' }}>
+                      Standard ERP default was: <em>{editingField.originalLabel}</em>
+                    </div>
+                  )}
+                </div>
+
+                {editingField.isCustom ? (
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }} className="schema-form-group">
+                      <div>
+                        <label className="schema-form-label">
+                          Field Key (ID) *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={editId}
+                          onChange={e => setEditId(e.target.value)}
+                          className="schema-form-input"
+                          style={{ fontFamily: 'monospace' }}
+                        />
+                      </div>
+
+                      <div>
+                        <label className="schema-form-label">
+                          Data Type
+                        </label>
+                        <select
+                          value={editDataType}
+                          onChange={e => setEditDataType(e.target.value as any)}
+                          className="schema-form-select"
+                        >
+                          <option value="text">Text / String</option>
+                          <option value="number">Number / Quantity</option>
+                          <option value="currency">Currency (₹)</option>
+                          <option value="date">Date</option>
+                          <option value="boolean">Yes / No (Boolean)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {editId.trim() !== editingField.id && (
+                      <div style={{ 
+                        margin: '0 0 1rem 0', 
+                        padding: '8px 12px', 
+                        borderRadius: '6px', 
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)', 
+                        border: '1px solid rgba(59, 130, 246, 0.3)',
+                        fontSize: '0.75rem',
+                        color: '#93c5fd',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '6px'
+                      }}>
+                        <Info size={14} style={{ flexShrink: 0, marginTop: '2px' }} />
+                        <span>
+                          <strong>Real-time Data Cascade:</strong> Renaming field key from <code>{editingField.id}</code> to <code>{editId.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_')}</code> will automatically update all existing data records in real time.
+                        </span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="schema-form-group">
+                    <label className="schema-form-label">
+                      System Field Key
+                    </label>
+                    <div style={{ 
+                      padding: '8px 12px', 
+                      background: '#090e17', 
+                      border: '1px solid #1e293b', 
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
+                    }}>
+                      <code style={{ fontFamily: 'monospace', color: '#94a3b8', fontSize: '0.85rem' }}>{editingField.id}</code>
+                      <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Core ERP Anchor (Protected)</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="schema-form-group" style={{ marginBottom: '1.5rem' }}>
+                  <label className="schema-form-label">
+                    Description & Company Usage Notes
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Describe how this parameter is used in your business workflows..."
+                    value={editDescription}
+                    onChange={e => setEditDescription(e.target.value)}
+                    className="schema-form-textarea"
+                    style={{ resize: 'vertical' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    {editingField.isOverride && (
+                      <button
+                        type="button"
+                        onClick={() => handleResetToDefault(editingField)}
+                        className="schema-btn-cancel"
+                        style={{ color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.4)' }}
+                      >
+                        Restore ERP Default
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditModalOpen(false)}
+                      className="schema-btn-cancel"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="schema-btn-submit"
+                    >
+                      {isSubmitting ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
         {/* Add Parameter Sub-Modal */}
         {isAddModalOpen && (
           <div 
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(0,0,0,0.7)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1100
-            }}
+            className="schema-add-backdrop"
             onClick={() => setIsAddModalOpen(false)}
           >
             <div 
-              style={{
-                backgroundColor: 'var(--bg-card)',
-                border: '1px solid var(--grid-line-major)',
-                borderRadius: '12px',
-                padding: '1.5rem',
-                width: '460px',
-                maxWidth: '90%',
-                boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
-              }}
+              className="schema-add-dialog"
               onClick={e => e.stopPropagation()}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h4 style={{ margin: 0, fontSize: '1.1rem', color: '#fff' }}>Add Custom Parameter</h4>
-                <button onClick={() => setIsAddModalOpen(false)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
+              <div className="schema-add-header">
+                <h4>Add Custom Parameter</h4>
+                <button 
+                  onClick={() => setIsAddModalOpen(false)} 
+                  className="schema-close-btn"
+                  aria-label="Close form"
+                >
                   <X size={18} />
                 </button>
               </div>
 
               <form onSubmit={handleAddField}>
-                <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '4px' }}>
+                <div className="schema-form-group">
+                  <label className="schema-form-label">
                     Parameter Display Label *
                   </label>
                   <input
@@ -388,72 +663,49 @@ export default function SchemaStudioModal({ isOpen, onClose }: SchemaStudioModal
                     placeholder="e.g. Doctor Specialty, WhatsApp Opt-in"
                     value={newLabel}
                     onChange={e => setNewLabel(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: '6px',
-                      background: 'var(--bg-app)',
-                      border: '1px solid var(--grid-line-major)',
-                      color: '#fff',
-                      fontSize: '0.85rem'
-                    }}
+                    className="schema-form-input"
+                    autoFocus
                   />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }} className="schema-form-group">
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '4px' }}>
+                    <label className="schema-form-label">
                       Target Domain
                     </label>
                     <select
                       value={newDomain}
                       onChange={e => setNewDomain(e.target.value as any)}
-                      style={{
-                        width: '100%',
-                        padding: '8px 12px',
-                        borderRadius: '6px',
-                        background: 'var(--bg-app)',
-                        border: '1px solid var(--grid-line-major)',
-                        color: '#fff',
-                        fontSize: '0.85rem'
-                      }}
+                      className="schema-form-select"
                     >
-                      <option value="business">Business 360</option>
-                      <option value="transaction">Transactions / Journal</option>
-                      <option value="inventory">Opening Stock</option>
-                      <option value="outstanding">Outstanding / Debtors</option>
-                      <option value="payment">Bank & Cash</option>
+                      <option value="business">Business 360 (Parties)</option>
+                      <option value="transaction">Transactions (Sales/Purchases)</option>
+                      <option value="inventory">Inventory (Stock & SKUs)</option>
+                      <option value="outstanding">Outstanding (Debt/Ageing)</option>
+                      <option value="payment">Bank & Cash Vouchers</option>
                     </select>
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '4px' }}>
+                    <label className="schema-form-label">
                       Data Type
                     </label>
                     <select
                       value={newDataType}
                       onChange={e => setNewDataType(e.target.value as any)}
-                      style={{
-                        width: '100%',
-                        padding: '8px 12px',
-                        borderRadius: '6px',
-                        background: 'var(--bg-app)',
-                        border: '1px solid var(--grid-line-major)',
-                        color: '#fff',
-                        fontSize: '0.85rem'
-                      }}
+                      className="schema-form-select"
                     >
                       <option value="text">Text / String</option>
                       <option value="number">Number / Quantity</option>
                       <option value="currency">Currency (₹)</option>
                       <option value="date">Date</option>
-                      <option value="boolean">Yes / No</option>
+                      <option value="boolean">Yes / No (Boolean)</option>
                     </select>
                   </div>
                 </div>
 
-                <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '4px' }}>
+                <div className="schema-form-group">
+                  <label className="schema-form-label">
                     Field Key (Optional — auto-generated from label)
                   </label>
                   <input
@@ -461,61 +713,37 @@ export default function SchemaStudioModal({ isOpen, onClose }: SchemaStudioModal
                     placeholder="e.g. doctor_specialty"
                     value={newId}
                     onChange={e => setNewId(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: '6px',
-                      background: 'var(--bg-app)',
-                      border: '1px solid var(--grid-line-major)',
-                      color: '#fff',
-                      fontSize: '0.85rem',
-                      fontFamily: 'monospace'
-                    }}
+                    className="schema-form-input"
+                    style={{ fontFamily: 'monospace' }}
                   />
                 </div>
 
-                <div style={{ marginBottom: '1.25rem' }}>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', marginBottom: '4px' }}>
+                <div className="schema-form-group" style={{ marginBottom: '1.5rem' }}>
+                  <label className="schema-form-label">
                     Description & Purpose
                   </label>
                   <textarea
-                    rows={2}
+                    rows={3}
                     placeholder="Why is this parameter captured and how will it be used?"
                     value={newDescription}
                     onChange={e => setNewDescription(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: '6px',
-                      background: 'var(--bg-app)',
-                      border: '1px solid var(--grid-line-major)',
-                      color: '#fff',
-                      fontSize: '0.85rem',
-                      resize: 'none'
-                    }}
+                    className="schema-form-textarea"
+                    style={{ resize: 'vertical' }}
                   />
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                   <button
                     type="button"
                     onClick={() => setIsAddModalOpen(false)}
-                    style={{
-                      padding: '6px 14px',
-                      borderRadius: '6px',
-                      background: 'transparent',
-                      border: '1px solid var(--grid-line-major)',
-                      color: '#94a3b8',
-                      cursor: 'pointer'
-                    }}
+                    className="schema-btn-cancel"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="btn-primary"
-                    style={{ padding: '6px 18px' }}
+                    className="schema-btn-submit"
                   >
                     {isSubmitting ? 'Saving...' : 'Create Parameter'}
                   </button>

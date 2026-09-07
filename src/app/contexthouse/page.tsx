@@ -12,8 +12,10 @@ import {
   MoreHorizontal, 
   ShieldCheck, 
   Bot, 
-  Network
+  Network,
+  Database
 } from 'lucide-react';
+import SchemaStudioModal from '@/components/SchemaStudioModal';
 import './contexthouse.css';
 
 interface DatasetItem {
@@ -52,6 +54,7 @@ export default function ContexthousePage() {
   const [activeCategory, setActiveCategory] = useState<'raw' | 'normalized' | 'identity' | 'ready'>('identity');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isSchemaStudioOpen, setIsSchemaStudioOpen] = useState(false);
 
   useEffect(() => {
     async function loadAssets() {
@@ -111,9 +114,17 @@ export default function ContexthousePage() {
       <main className="main-content">
         <header className="top-header">
           <div className="header-breadcrumbs">
-            <span className="muted">Platform</span> / <span className="active-breadcrumb">Data Contexthouse</span>
+            <span className="muted">Platform</span> / <span className="active-breadcrumb">Data Schema Lineage</span>
           </div>
-          <div className="header-actions">
+          <div className="header-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <button 
+              className="btn-primary" 
+              onClick={() => setIsSchemaStudioOpen(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', fontSize: '13px', borderRadius: '6px', cursor: 'pointer' }}
+            >
+              <Database size={15} />
+              <span>Editable Schema Studio</span>
+            </button>
             <ThemeToggle />
             <div className="avatar">AD</div>
           </div>
@@ -295,6 +306,11 @@ export default function ContexthousePage() {
           </div>
         </div>
       </main>
+
+      <SchemaStudioModal 
+        isOpen={isSchemaStudioOpen} 
+        onClose={() => setIsSchemaStudioOpen(false)} 
+      />
     </div>
   );
 }

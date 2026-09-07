@@ -54,6 +54,7 @@ interface Business {
   };
   totalSales?: number;
   currentOutstanding?: number;
+  customAttributes?: Record<string, any>;
   updatedAt: string;
 }
 
@@ -469,6 +470,24 @@ export default function Business360Page() {
                     </div>
                   </div>
                 </div>
+
+                {activeBusiness.customAttributes && Object.keys(activeBusiness.customAttributes).length > 0 && (
+                  <div className="profile-section" style={{ borderLeft: '3px solid #a855f7', paddingLeft: '1rem' }}>
+                    <h4>Custom Schema Parameters</h4>
+                    <div className="detail-grid">
+                      {Object.entries(activeBusiness.customAttributes).map(([key, val]) => (
+                        <div key={key} className="detail-item">
+                          <span className="detail-label" style={{ textTransform: 'capitalize' }}>
+                            {key.replace(/_/g, ' ')}
+                          </span>
+                          <span className="detail-value" style={{ color: '#c084fc', fontWeight: 600 }}>
+                            {typeof val === 'boolean' ? (val ? 'Yes (Opted In)' : 'No') : String(val)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

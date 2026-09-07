@@ -28,6 +28,11 @@ export class TransactionRepository {
     this.loadFromDisk();
   }
 
+  public reloadFromDisk() {
+    this.transactions = [];
+    this.loadFromDisk();
+  }
+
   private loadFromDisk() {
     try {
       if (fs.existsSync(this.filePath)) {
@@ -42,7 +47,9 @@ export class TransactionRepository {
   private async persistToDisk() {
     try {
       ensureReadyDir();
-      await fs.promises.writeFile(this.filePath, JSON.stringify(this.transactions, null, 2), 'utf8');
+      const tempPath = `${this.filePath}.${Date.now()}.${Math.random().toString(36).substring(7)}.tmp`;
+      await fs.promises.writeFile(tempPath, JSON.stringify(this.transactions, null, 2), 'utf8');
+      await fs.promises.rename(tempPath, this.filePath);
     } catch (err) {
       console.error('[TransactionRepository] Failed to persist to disk:', err);
     }
@@ -115,6 +122,11 @@ export class InventoryRepository {
     this.loadFromDisk();
   }
 
+  public reloadFromDisk() {
+    this.inventory.clear();
+    this.loadFromDisk();
+  }
+
   private loadFromDisk() {
     try {
       if (fs.existsSync(this.filePath)) {
@@ -131,7 +143,9 @@ export class InventoryRepository {
     try {
       ensureReadyDir();
       const list = Array.from(this.inventory.values());
-      await fs.promises.writeFile(this.filePath, JSON.stringify(list, null, 2), 'utf8');
+      const tempPath = `${this.filePath}.${Date.now()}.${Math.random().toString(36).substring(7)}.tmp`;
+      await fs.promises.writeFile(tempPath, JSON.stringify(list, null, 2), 'utf8');
+      await fs.promises.rename(tempPath, this.filePath);
     } catch (err) {
       console.error('[InventoryRepository] Failed to persist to disk:', err);
     }
@@ -174,6 +188,11 @@ export class OutstandingRepository {
     this.loadFromDisk();
   }
 
+  public reloadFromDisk() {
+    this.outstandings.clear();
+    this.loadFromDisk();
+  }
+
   private loadFromDisk() {
     try {
       if (fs.existsSync(this.filePath)) {
@@ -190,7 +209,9 @@ export class OutstandingRepository {
     try {
       ensureReadyDir();
       const list = Array.from(this.outstandings.values());
-      await fs.promises.writeFile(this.filePath, JSON.stringify(list, null, 2), 'utf8');
+      const tempPath = `${this.filePath}.${Date.now()}.${Math.random().toString(36).substring(7)}.tmp`;
+      await fs.promises.writeFile(tempPath, JSON.stringify(list, null, 2), 'utf8');
+      await fs.promises.rename(tempPath, this.filePath);
     } catch (err) {
       console.error('[OutstandingRepository] Failed to persist to disk:', err);
     }

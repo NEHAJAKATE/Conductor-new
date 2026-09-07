@@ -52,7 +52,7 @@ export class LocalStorageAdapter implements StorageAdapter {
 
   async getReadStream(key: string): Promise<Readable> {
     if (key.startsWith('sample-data/')) {
-      return fs.createReadStream(path.resolve(process.cwd(), key));
+      return fs.createReadStream(path.resolve(process.cwd(), 'data', key.replace(/^sample-data\/?/, '')));
     }
     const targetPath = path.join(this.baseDir, key.replace(/\//g, '_'));
     if (!fs.existsSync(targetPath)) {
@@ -138,7 +138,7 @@ export class R2StorageAdapter implements StorageAdapter {
 
   async getReadStream(key: string): Promise<Readable> {
     if (key.startsWith('sample-data/')) {
-      return fs.createReadStream(path.resolve(process.cwd(), key));
+      return fs.createReadStream(path.resolve(process.cwd(), 'data', key.replace(/^sample-data\/?/, '')));
     }
     if (!this.isSimulation && this.client) {
       const response = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
@@ -223,7 +223,7 @@ export class S3StorageAdapter implements StorageAdapter {
 
   async getReadStream(key: string): Promise<Readable> {
     if (key.startsWith('sample-data/')) {
-      return fs.createReadStream(path.resolve(process.cwd(), key));
+      return fs.createReadStream(path.resolve(process.cwd(), 'data', key.replace(/^sample-data\/?/, '')));
     }
     if (!this.isSimulation && this.client) {
       const response = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
@@ -267,7 +267,7 @@ export class AzureBlobStorageAdapter implements StorageAdapter {
 
   async getReadStream(key: string): Promise<Readable> {
     if (key.startsWith('sample-data/')) {
-      return fs.createReadStream(path.resolve(process.cwd(), key));
+      return fs.createReadStream(path.resolve(process.cwd(), 'data', key.replace(/^sample-data\/?/, '')));
     }
     const targetPath = path.join(this.simulationDir, key.replace(/\//g, '_'));
     return fs.createReadStream(targetPath);
@@ -307,7 +307,7 @@ export class GcsStorageAdapter implements StorageAdapter {
 
   async getReadStream(key: string): Promise<Readable> {
     if (key.startsWith('sample-data/')) {
-      return fs.createReadStream(path.resolve(process.cwd(), key));
+      return fs.createReadStream(path.resolve(process.cwd(), 'data', key.replace(/^sample-data\/?/, '')));
     }
     const targetPath = path.join(this.simulationDir, key.replace(/\//g, '_'));
     return fs.createReadStream(targetPath);
