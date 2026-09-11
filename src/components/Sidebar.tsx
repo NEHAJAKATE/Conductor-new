@@ -21,7 +21,8 @@ import {
   Database,
   ArrowRightLeft,
   ShieldCheck,
-  UserCheck
+  UserCheck,
+  MessageSquare
 } from 'lucide-react';
 import './sidebar.css';
 
@@ -114,6 +115,15 @@ export default function Sidebar() {
       )}
       
       <nav className="sidebar-nav">
+        {/* INTELLIGENCE GROUP */}
+        <div className="nav-group">
+          {!collapsed && <p className="nav-group-title" style={{ color: '#818cf8' }}>Intelligence</p>}
+          <Link href="/assistant" className={getNavClass('/assistant')} style={{ background: pathname === '/assistant' ? 'rgba(129, 140, 248, 0.1)' : 'transparent', color: pathname === '/assistant' ? '#818cf8' : 'inherit', borderLeft: pathname === '/assistant' ? '3px solid #818cf8' : '3px solid transparent' }}>
+            <MessageSquare size={18} />
+            {!collapsed && <span>Ask Conductor</span>}
+          </Link>
+        </div>
+
         <div className="nav-group">
           {!collapsed && <p className="nav-group-title">Overview & Customers</p>}
           <Link href="/" className={getNavClass('/')}>
@@ -136,19 +146,23 @@ export default function Sidebar() {
           {!collapsed && <p className="nav-group-title">Shop Operations</p>}
           <Link href="/sales" className={getNavClass('/sales')}>
             <TrendingUp size={18} />
-            {!collapsed && <span>Sales (Invoices)</span>}
+            {!collapsed && <span>Sales</span>}
           </Link>
           <Link href="/purchases" className={getNavClass('/purchases')}>
             <ShoppingBag size={18} />
-            {!collapsed && <span>Purchases (Spend)</span>}
+            {!collapsed && <span>Purchases</span>}
           </Link>
           <Link href="/inventory" className={getNavClass('/inventory')}>
             <Boxes size={18} />
             {!collapsed && <span>Stock & Reorder</span>}
           </Link>
+          <Link href="/item-ledger" className={getNavClass('/item-ledger')}>
+            <FileBarChart size={18} />
+            {!collapsed && <span>Item Ledger</span>}
+          </Link>
           <Link href="/outstanding" className={getNavClass('/outstanding')}>
             <Clock size={18} />
-            {!collapsed && <span>Receivables & Ageing</span>}
+            {!collapsed && <span>Outstanding</span>}
           </Link>
           {isOwner && (
             <Link href="/reconciliation" className={getNavClass('/reconciliation')}>

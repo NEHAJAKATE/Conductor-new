@@ -11,7 +11,7 @@ export interface ReportQueryParams {
   dataset: 'sales' | 'purchases' | 'outstanding' | 'inventory' | 'business_activity';
   startDate?: string;
   endDate?: string;
-  groupBy?: 'party' | 'product' | 'company' | 'area' | 'route' | 'month' | 'day';
+  groupBy?: 'party' | 'product' | 'company' | 'area' | 'route' | 'month' | 'day' | 'invoice';
   filterParty?: string;
   filterCompany?: string;
   filterRisk?: string;
@@ -158,6 +158,12 @@ export class ReportService {
         } else if (params.groupBy === 'area') {
           dimKey = tx.area || 'Unassigned Area';
           sec = tx.route || '';
+        } else if (params.groupBy === 'day') {
+          dimKey = tx.date;
+          sec = 'Daily Sales';
+        } else if (params.groupBy === 'invoice') {
+          dimKey = tx.invoiceId;
+          sec = tx.date;
         }
 
         const existing = groupedMap.get(dimKey) || {
@@ -180,15 +186,24 @@ export class ReportService {
       .map(([label, d]) => ({ label, value: Math.round(d.value), count: d.count }))
       .sort((a, b) => a.label.localeCompare(b.label));
 
-    let rows = Array.from(groupedMap.values()).map(r => ({
-      dimension: r.dimension,
-      secondary: r.secondary,
-      revenue: Math.round(r.revenue * 100) / 100,
-      tax: Math.round(r.tax * 100) / 100,
-      gross: Math.round((r.revenue + r.tax) * 100) / 100,
-      units: Math.round(r.units),
-      invoices: r.invoices,
-    }));
+    let rows = Array.from(groupedMap.values()).map(r => {
+      let partyName = undefined;
+      // If grouped by invoice, look up party from a matching tx
+      if (params.groupBy === 'invoice') {
+        const foundTx = sales.find(s => s.invoiceId === r.dimension);
+        if (foundTx) partyName = foundTx.partyName;
+      }
+      return {
+        dimension: r.dimension,
+        secondary: r.secondary,
+        partyName: partyName,
+        revenue: Math.round(r.revenue * 100) / 100,
+        tax: Math.round(r.tax * 100) / 100,
+        gross: Math.round((r.revenue + r.tax) * 100) / 100,
+        units: Math.round(r.units),
+        invoices: r.invoices,
+      };
+    });
 
     // Sorting
     const sortBy = params.sortBy || 'revenue';
@@ -560,7 +575,9 @@ export class ReportService {
       productId: item.productId,
       productName: item.productName,
       manufacturer: item.manufacturer,
+      manufacturerSource: item.manufacturerSource,
       openingStock: item.openingStock,
+      hasOpeningStock: item.hasOpeningStock,
       purchases: item.purchases,
       salesReturns: item.salesReturns,
       sales: item.sales,
@@ -573,7 +590,10 @@ export class ReportService {
       variance: item.variance,
       reconciliationStatus: item.reconciliationStatus,
       isLowStock: item.isLowStock,
+      stockStatus: item.stockStatus,
+      dataQualityIssues: item.dataQualityIssues,
       reorderThreshold: item.reorderPolicy.reorderThreshold,
+      monthlyBaselineConsumption: item.reorderPolicy.monthlyBaselineConsumption,
       suggestedReorderQty: item.recommendedOrderQuantity,
       reorderRationale: item.reorderRationale,
     }));
