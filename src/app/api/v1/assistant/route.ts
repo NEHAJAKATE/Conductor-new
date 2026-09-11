@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
     if (!query) return NextResponse.json({ error: 'Query is required' }, { status: 400 });
 
     // Step 1: Extract intent via local LLM
-    let parsed: { intent: string; entities: any };
+    let parsed: { intent: string; entities: any; dataRequired?: string; questionSummary?: string };
     try {
       parsed = await callOllamaForIntent(query);
     } catch (err: any) {

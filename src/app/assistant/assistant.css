@@ -187,7 +187,7 @@
 
 [data-theme='light'] .message.assistant {
   background: #ffffff;
-  border-color: #e2dde6;
+  border-color: var(--grid-line-major);
 }
 
 /* Source / verified badge */
@@ -203,7 +203,7 @@
   flex-wrap: wrap;
 }
 
-.badge-verified   { color: #5cb198; font-weight: 600; }
+.badge-verified   { color: #10b981; font-weight: 600; }
 .badge-clarify    { color: #f59e0b; font-weight: 600; }
 .badge-unavailable{ color: #ef4444; font-weight: 600; }
 .badge-general    { color: #818cf8; font-weight: 600; }

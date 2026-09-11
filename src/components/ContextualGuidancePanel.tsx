@@ -313,8 +313,8 @@ export default function ContextualGuidancePanel() {
           <div className="guidance-section">
             <span className="guidance-section-label">Source & Freshness</span>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-              <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
-                <span style={{ fontWeight: 600, color: '#e2e8f0' }}>Source:</span> {guidance.source}
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-loud)', fontWeight: 500 }}>
+                <span style={{ fontWeight: 700, color: 'var(--text-loud)' }}>Source:</span> {guidance.source}
               </div>
               <div className="freshness-pill">
                 <Clock size={12} />

@@ -194,8 +194,8 @@ export default function ReconciliationPage() {
                   href="/login"
                   style={{
                     background: 'transparent',
-                    border: '1px solid #94a3b8',
-                    color: '#f8fafc',
+                    border: '1px solid var(--grid-line-major)',
+                    color: 'var(--text-loud)',
                     padding: '8px 14px',
                     borderRadius: '6px',
                     textDecoration: 'none',
@@ -223,25 +223,25 @@ export default function ReconciliationPage() {
               <div className="kpi-card">
                 <div className="kpi-header">
                   <span>Matched Entries</span>
-                  <CheckCircle2 size={16} color="#34d399" />
+                  <CheckCircle2 size={16} color="var(--color-success)" />
                 </div>
-                <div className="kpi-value" style={{ color: '#34d399' }}>{data.matchedCount?.toLocaleString()}</div>
+                <div className="kpi-value" style={{ color: 'var(--color-success)' }}>{data.matchedCount?.toLocaleString()}</div>
                 <div className="kpi-subtext">₹{(data.matchedAmount / 100000).toFixed(2)} Lakh verified</div>
               </div>
               <div className="kpi-card">
                 <div className="kpi-header">
                   <span>Unmatched Bank Lines</span>
-                  <HelpCircle size={16} color="#fbbf24" />
+                  <HelpCircle size={16} color="var(--color-warning)" />
                 </div>
-                <div className="kpi-value" style={{ color: '#fbbf24' }}>{data.unmatchedCount?.toLocaleString()}</div>
+                <div className="kpi-value" style={{ color: 'var(--color-warning)' }}>{data.unmatchedCount?.toLocaleString()}</div>
                 <div className="kpi-subtext">₹{(data.unmatchedAmount / 100000).toFixed(2)} Lakh unlinked</div>
               </div>
               <div className="kpi-card">
                 <div className="kpi-header">
                   <span>Amount Mismatches</span>
-                  <AlertTriangle size={16} color="#f87171" />
+                  <AlertTriangle size={16} color="var(--color-danger)" />
                 </div>
-                <div className="kpi-value" style={{ color: '#f87171' }}>{data.mismatchCount?.toLocaleString()}</div>
+                <div className="kpi-value" style={{ color: 'var(--color-danger)' }}>{data.mismatchCount?.toLocaleString()}</div>
                 <div className="kpi-subtext">₹{(data.mismatchAmount / 100000).toFixed(2)} Lakh variance</div>
               </div>
             </div>
@@ -249,7 +249,7 @@ export default function ReconciliationPage() {
 
           <div className="action-bar">
             <div className="filter-group">
-              <label style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Status:</label>
+              <label style={{ fontSize: '0.85rem', color: 'var(--text-loud)', fontWeight: 600 }}>Status:</label>
               <select 
                 className="filter-select"
                 value={filterStatus}
@@ -263,7 +263,7 @@ export default function ReconciliationPage() {
             </div>
 
             <div className="search-input-group">
-              <Search size={16} color="#94a3b8" />
+              <Search size={16} color="var(--text-muted)" />
               <input 
                 type="text" 
                 placeholder="Search by bank, voucher, party..." 
@@ -289,13 +289,13 @@ export default function ReconciliationPage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                       Executing automated 4-rule reconciliation matching engine...
                     </td>
                   </tr>
                 ) : filteredItems.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                       No bank reconciliation records found.
                     </td>
                   </tr>
@@ -309,13 +309,13 @@ export default function ReconciliationPage() {
                     return (
                       <tr key={i}>
                         <td>
-                          <div style={{ fontWeight: 600, color: '#f8fafc' }}>{item.bankRow?.bankAccount}</div>
-                          <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{item.bankRow?.date?.substring(0, 10)}</div>
+                          <div style={{ fontWeight: 700, color: 'var(--text-loud)', fontSize: '0.9rem' }}>{item.bankRow?.bankAccount}</div>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>{item.bankRow?.date?.substring(0, 10)}</div>
                         </td>
-                        <td style={{ maxWidth: '280px', fontSize: '0.8rem', color: '#cbd5e1' }}>
+                        <td style={{ maxWidth: '280px', fontSize: '0.85rem', color: 'var(--text-default)', fontWeight: 600 }}>
                           {item.bankRow?.particulars}
                         </td>
-                        <td style={{ fontWeight: 600, color: item.bankRow?.type === 'RECEIPT' ? '#34d399' : '#f87171' }}>
+                        <td style={{ fontWeight: 700, color: item.bankRow?.type === 'RECEIPT' ? 'var(--color-success)' : 'var(--color-danger)' }}>
                           ₹{item.bankRow?.amount?.toLocaleString()} ({item.bankRow?.type})
                         </td>
                         <td>
@@ -326,19 +326,19 @@ export default function ReconciliationPage() {
                         <td>
                           {item.matchedTransaction ? (
                             <div>
-                              <div style={{ fontWeight: 600, color: '#60a5fa' }}>Voucher #{item.matchedTransaction.invoiceId}</div>
-                              <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{item.matchedTransaction.partyName} (₹{item.matchedTransaction.grossAmount?.toLocaleString()})</div>
+                              <div style={{ fontWeight: 700, color: 'var(--accent-secondary)' }}>Voucher #{item.matchedTransaction.invoiceId}</div>
+                              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>{item.matchedTransaction.partyName} (₹{item.matchedTransaction.grossAmount?.toLocaleString()})</div>
                             </div>
                           ) : (
-                            <span style={{ color: '#64748b', fontSize: '0.8rem' }}>No ERP Match</span>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600 }}>No ERP Match</span>
                           )}
                         </td>
-                        <td style={{ fontWeight: 600, color: item.variance !== 0 ? '#f87171' : '#94a3b8' }}>
+                        <td style={{ fontWeight: 700, color: item.variance !== 0 ? 'var(--color-danger)' : 'var(--text-muted)' }}>
                           {item.variance !== 0 ? `₹${Math.abs(item.variance).toLocaleString()}` : '₹0.00'}
                         </td>
-                        <td style={{ fontSize: '0.75rem', color: '#94a3b8', maxWidth: '250px' }}>
-                          <div>Confidence: {item.matchConfidence}%</div>
-                          <div>{item.notes}</div>
+                        <td style={{ fontSize: '0.78rem', color: 'var(--text-default)', maxWidth: '250px' }}>
+                          <div style={{ fontWeight: 700, color: 'var(--text-loud)' }}>Confidence: {item.matchConfidence}%</div>
+                          <div style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{item.notes}</div>
                         </td>
                       </tr>
                     );

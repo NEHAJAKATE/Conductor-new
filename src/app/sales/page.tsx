@@ -110,7 +110,7 @@ export default function SalesPage() {
             </form>
 
             <div className="filter-group">
-              <label style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Aggregate By:</label>
+              <label style={{ fontSize: '0.85rem', color: 'var(--text-loud)', fontWeight: 600 }}>Aggregate By:</label>
               <select 
                 className="filter-select"
                 value={groupBy}
@@ -130,8 +130,8 @@ export default function SalesPage() {
 
           {report?.status === 'NOT_CONNECTED' ? (
             <div style={{
-              background: '#090d16',
-              border: '1px solid #1e293b',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--grid-line-major)',
               borderRadius: '12px',
               padding: '3rem 2rem',
               textAlign: 'center',
@@ -141,10 +141,10 @@ export default function SalesPage() {
               gap: '1rem',
               margin: '1.5rem 0'
             }}>
-              <TrendingUp size={42} color="#64748b" />
+              <TrendingUp size={42} color="var(--text-muted)" />
               <div>
-                <h3 style={{ margin: '0 0 0.5rem 0', color: '#f8fafc', fontSize: '1.15rem' }}>Sales Dataset Not Connected</h3>
-                <p style={{ margin: 0, color: '#94a3b8', maxWidth: '540px', fontSize: '0.875rem', lineHeight: 1.5 }}>
+                <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-loud)', fontSize: '1.15rem' }}>Sales Dataset Not Connected</h3>
+                <p style={{ margin: 0, color: 'var(--text-muted)', maxWidth: '540px', fontSize: '0.875rem', lineHeight: 1.5 }}>
                   No ERP sales transaction journal or invoice vouchers have been ingested yet. Ingest your sales analysis CSV or connect your ERP stream to view real-time revenue, Output GST, and dealer order patterns.
                 </p>
               </div>
@@ -175,29 +175,29 @@ export default function SalesPage() {
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                      <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                         Calculating deterministic sales aggregations...
                       </td>
                     </tr>
                   ) : !report || report.rows.length === 0 ? (
                     <tr>
-                      <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                      <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                         No sales records found matching the criteria.
                       </td>
                     </tr>
                   ) : (
                     report.rows.map((row: any, i: number) => (
                       <tr key={i}>
-                        <td style={{ fontWeight: 600, color: '#f8fafc' }}>
+                        <td style={{ fontWeight: 700, color: 'var(--text-loud)', fontSize: '0.925rem' }}>
                           {groupBy === 'day' ? formatDate(row.dimension) : row.dimension}
                         </td>
-                        <td style={{ color: '#94a3b8', fontSize: '0.8rem' }}>
+                        <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 500 }}>
                           {groupBy === 'invoice' ? row.partyName : (row.secondary || 'General')}
                         </td>
-                        <td style={{ fontWeight: 600, color: '#60a5fa' }}>{formatINR(row.revenue)}</td>
-                        <td style={{ color: '#94a3b8' }}>{formatINR(row.tax)}</td>
-                        <td style={{ fontWeight: 600, color: '#34d399' }}>{formatINR(row.gross)}</td>
-                        <td>{row.units.toLocaleString()}</td>
+                        <td style={{ fontWeight: 700, color: 'var(--purchases-color)' }}>{formatINR(row.revenue)}</td>
+                        <td style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{formatINR(row.tax)}</td>
+                        <td style={{ fontWeight: 800, color: 'var(--color-success)' }}>{formatINR(row.gross)}</td>
+                        <td style={{ fontWeight: 600, color: 'var(--text-loud)' }}>{row.units.toLocaleString()}</td>
                         {groupBy !== 'invoice' && <td><span className="badge badge-neutral">{row.invoices}</span></td>}
                       </tr>
                     ))

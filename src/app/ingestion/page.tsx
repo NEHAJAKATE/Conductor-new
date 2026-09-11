@@ -1165,7 +1165,7 @@ export default function IngestionPage() {
                         <span className="log-category" style={{ color: getLogCategoryColor(log.category) }}>
                           {log.category.toUpperCase()}
                         </span>
-                        <span className="log-message" style={{ color: log.level === 'error' ? '#ef4444' : log.level === 'success' ? 'var(--accent-primary)' : log.level === 'warning' ? 'var(--accent-secondary)' : '#e2e8f0' }}>
+                        <span className="log-message" style={{ color: log.level === 'error' ? '#ef4444' : log.level === 'success' ? 'var(--accent-primary)' : log.level === 'warning' ? 'var(--accent-secondary)' : 'var(--text-loud)' }}>
                           {log.message}
                         </span>
                       </div>

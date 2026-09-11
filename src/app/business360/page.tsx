@@ -299,23 +299,23 @@ export default function Business360Page() {
                   businesses.slice(0, 50).map(b => (
                     <tr key={b.id}>
                       <td>
-                        <div style={{ fontWeight: 600, color: '#f8fafc' }}>{b.name}</div>
+                        <div style={{ fontWeight: 700, color: 'var(--text-loud)', fontSize: '0.925rem' }}>{b.name}</div>
                         {b.legalName && b.legalName !== b.name && (
-                          <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{b.legalName}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{b.legalName}</div>
                         )}
                       </td>
                       <td>
                         {b.taxId ? (
-                          <span style={{ fontFamily: 'monospace', color: '#60a5fa' }}>{b.taxId}</span>
+                          <span style={{ fontFamily: 'monospace', color: 'var(--accent-secondary)', fontWeight: 600 }}>{b.taxId}</span>
                         ) : b.pan ? (
-                          <span style={{ fontFamily: 'monospace', color: '#94a3b8' }}>PAN: {b.pan}</span>
+                          <span style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>PAN: {b.pan}</span>
                         ) : (
-                          <span style={{ color: '#475569', fontSize: '0.8rem' }}>Unregistered</span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Unregistered</span>
                         )}
                       </td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                          <MapPin size={13} color="#94a3b8" />
+                          <MapPin size={13} color="var(--text-muted)" />
                           <span>{b.address.city || 'Prayagraj'}{b.address.area ? `, ${b.address.area}` : ''}</span>
                         </div>
                       </td>
@@ -323,7 +323,7 @@ export default function Business360Page() {
                       <td>
                         {b.credit.dynamicCreditLimit && b.credit.dynamicCreditLimit > 0 ? (
                           <div>
-                            <div style={{ fontWeight: 600, color: '#f8fafc' }}>
+                            <div style={{ fontWeight: 700, color: 'var(--text-loud)' }}>
                               ₹{Math.round(b.credit.dynamicCreditLimit).toLocaleString()}
                             </div>
                             <div style={{ fontSize: '0.75rem', marginTop: '0.2rem' }}>
@@ -332,7 +332,7 @@ export default function Business360Page() {
                           </div>
                         ) : b.credit.creditLimit > 0 ? (
                           <div>
-                            <div>₹{b.credit.creditLimit.toLocaleString()} (Static)</div>
+                            <div style={{ fontWeight: 600, color: 'var(--text-loud)' }}>₹{b.credit.creditLimit.toLocaleString()} (Static)</div>
                             <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{b.credit.creditDays} Days</div>
                           </div>
                         ) : (
@@ -387,11 +387,11 @@ export default function Business360Page() {
                   <X size={20} />
                 </button>
               </div>
-              <div className="modal-tabs" style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid #1e293b', padding: '0 1.5rem', background: '#090d16' }}>
+              <div className="modal-tabs" style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--grid-line-major)', padding: '0 1.5rem', background: 'var(--bg-app)' }}>
                 <button 
                   className={`tab-btn ${activeTab === 'profile' ? 'active' : ''}`}
                   onClick={() => setActiveTab('profile')}
-                  style={{ background: 'transparent', border: 'none', padding: '1rem 0', color: activeTab === 'profile' ? '#60a5fa' : '#94a3b8', borderBottom: activeTab === 'profile' ? '2px solid #60a5fa' : '2px solid transparent', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                  style={{ background: 'transparent', border: 'none', padding: '1rem 0', color: activeTab === 'profile' ? 'var(--accent-secondary)' : 'var(--text-muted)', borderBottom: activeTab === 'profile' ? '2px solid var(--accent-secondary)' : '2px solid transparent', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                 >
                   <Building2 size={16} /> Business Profile
                 </button>
@@ -567,24 +567,24 @@ export default function Business360Page() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     {/* Outstanding Buckets */}
                     {ledgerData?.outstanding && (
-                      <div className="profile-section" style={{ borderLeft: '3px solid #f59e0b', paddingLeft: '1rem' }}>
+                      <div className="profile-section" style={{ borderLeft: '3px solid var(--color-warning)', paddingLeft: '1rem' }}>
                         <h4>Outstanding Balance Breakdown</h4>
                         <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-                          <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px' }}>
-                            <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.25rem' }}>0-30 Days</div>
-                            <div style={{ fontSize: '1.2rem', fontWeight: 600, color: '#f8fafc' }}>{formatINR(ledgerData.outstanding.bucket0_30)}</div>
+                          <div style={{ flex: 1, background: 'var(--bg-app)', border: '1px solid var(--grid-line-major)', padding: '1rem', borderRadius: '8px' }}>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem', fontWeight: 600 }}>0-30 Days</div>
+                            <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-loud)' }}>{formatINR(ledgerData.outstanding.bucket0_30)}</div>
                           </div>
-                          <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px' }}>
-                            <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.25rem' }}>31-60 Days</div>
-                            <div style={{ fontSize: '1.2rem', fontWeight: 600, color: '#fbbf24' }}>{formatINR(ledgerData.outstanding.bucket31_60)}</div>
+                          <div style={{ flex: 1, background: 'var(--bg-app)', border: '1px solid var(--grid-line-major)', padding: '1rem', borderRadius: '8px' }}>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem', fontWeight: 600 }}>31-60 Days</div>
+                            <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--color-warning)' }}>{formatINR(ledgerData.outstanding.bucket31_60)}</div>
                           </div>
-                          <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px' }}>
-                            <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.25rem' }}>61-90 Days</div>
-                            <div style={{ fontSize: '1.2rem', fontWeight: 600, color: '#f97316' }}>{formatINR(ledgerData.outstanding.bucket61_90)}</div>
+                          <div style={{ flex: 1, background: 'var(--bg-app)', border: '1px solid var(--grid-line-major)', padding: '1rem', borderRadius: '8px' }}>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem', fontWeight: 600 }}>61-90 Days</div>
+                            <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--color-warning)' }}>{formatINR(ledgerData.outstanding.bucket61_90)}</div>
                           </div>
-                          <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px' }}>
-                            <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.25rem' }}>90+ Days</div>
-                            <div style={{ fontSize: '1.2rem', fontWeight: 600, color: '#ef4444' }}>{formatINR(ledgerData.outstanding.bucket90Plus)}</div>
+                          <div style={{ flex: 1, background: 'var(--bg-app)', border: '1px solid var(--grid-line-major)', padding: '1rem', borderRadius: '8px' }}>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem', fontWeight: 600 }}>90+ Days</div>
+                            <div style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--color-danger)' }}>{formatINR(ledgerData.outstanding.bucket90Plus)}</div>
                           </div>
                         </div>
                       </div>
@@ -594,9 +594,9 @@ export default function Business360Page() {
                     <div className="profile-section">
                       <h4>Transaction History</h4>
                       {ledgerLoading ? (
-                        <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>Loading transactions...</div>
+                        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>Loading transactions...</div>
                       ) : !ledgerData?.transactions?.length ? (
-                        <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>No transactions found for this customer.</div>
+                        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>No transactions found for this customer.</div>
                       ) : (
                         <table className="data-table" style={{ width: '100%', fontSize: '0.9rem' }}>
                           <thead>
@@ -612,14 +612,14 @@ export default function Business360Page() {
                           <tbody>
                             {ledgerData.transactions.map((tx: any) => (
                               <tr key={tx.id}>
-                                <td style={{ color: '#cbd5e1' }}>{formatDate(tx.date)}</td>
-                                <td style={{ textTransform: 'capitalize', color: tx.type === 'sale_return' ? '#34d399' : '#94a3b8' }}>
+                                <td style={{ color: 'var(--text-muted)' }}>{formatDate(tx.date)}</td>
+                                <td style={{ textTransform: 'capitalize', color: tx.type === 'sale_return' ? 'var(--color-success)' : 'var(--text-muted)' }}>
                                   {tx.type.replace('_', ' ')}
                                 </td>
-                                <td style={{ fontFamily: 'monospace', color: '#60a5fa' }}>{tx.invoiceId}</td>
-                                <td>{formatINR(tx.netAmount)}</td>
-                                <td>{formatINR(tx.taxAmount)}</td>
-                                <td style={{ fontWeight: 600, color: '#f8fafc' }}>{formatINR(tx.grossAmount)}</td>
+                                <td style={{ fontFamily: 'monospace', color: 'var(--accent-secondary)' }}>{tx.invoiceId}</td>
+                                <td style={{ fontWeight: 600, color: 'var(--text-loud)' }}>{formatINR(tx.netAmount)}</td>
+                                <td style={{ color: 'var(--text-muted)' }}>{formatINR(tx.taxAmount)}</td>
+                                <td style={{ fontWeight: 700, color: 'var(--text-loud)' }}>{formatINR(tx.grossAmount)}</td>
                               </tr>
                             ))}
                           </tbody>

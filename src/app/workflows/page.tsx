@@ -210,13 +210,13 @@ export default function WorkflowsPage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                       Loading automation policies...
                     </td>
                   </tr>
                 ) : rules.length === 0 ? (
                   <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                       No rules found.
                     </td>
                   </tr>
@@ -224,22 +224,22 @@ export default function WorkflowsPage() {
                   rules.map(rule => (
                     <tr key={rule.id}>
                       <td>
-                        <div style={{ fontWeight: 600, color: '#f8fafc' }}>{rule.name}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{rule.description}</div>
+                        <div style={{ fontWeight: 700, color: 'var(--text-loud)', fontSize: '0.925rem' }}>{rule.name}</div>
+                        <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)', fontWeight: 500, marginTop: '2px' }}>{rule.description}</div>
                       </td>
                       <td>
-                        <div style={{ fontFamily: 'monospace', color: '#60a5fa', fontSize: '0.8rem' }}>
+                        <div style={{ fontFamily: 'monospace', color: 'var(--accent-secondary)', fontSize: '0.825rem', fontWeight: 600 }}>
                           {rule.condition.field} {rule.condition.operator === 'greater_than' ? '>' : rule.condition.operator === 'less_than' ? '<' : '='} {String(rule.condition.value)}
                         </div>
                       </td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                           {getChannelIcon(rule.action.channel)}
-                          <span style={{ fontSize: '0.85rem', color: '#e2e8f0' }}>{rule.action.recipient}</span>
+                          <span style={{ fontSize: '0.85rem', color: 'var(--text-loud)', fontWeight: 500 }}>{rule.action.recipient}</span>
                         </div>
                       </td>
                       <td>
-                        <span className="badge badge-neutral">{rule.executionCount}</span>
+                        <span style={{ fontWeight: 700, color: 'var(--text-loud)', fontSize: '0.9rem' }}>{rule.executionCount}</span>
                       </td>
                       <td>
                         {rule.enabled ? (
@@ -252,7 +252,7 @@ export default function WorkflowsPage() {
                         <div className="rule-actions">
                         <button
                           onClick={() => handleToggle(rule.id)}
-                          style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: rule.enabled ? '#3b82f6' : '#64748b' }}
+                          style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: rule.enabled ? 'var(--accent-secondary)' : 'var(--text-muted)' }}
                           title="Toggle Rule State"
                         >
                           {rule.enabled ? <ToggleRight size={28} /> : <ToggleLeft size={28} />}

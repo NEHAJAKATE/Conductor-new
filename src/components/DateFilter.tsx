@@ -80,11 +80,11 @@ export default function DateFilter({ onFilterChange, defaultMode = 'all' }: Date
       <button 
         className="secondary-btn" 
         onClick={() => setIsOpen(!isOpen)}
-        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: '#0f172a', border: '1px solid #1e293b' }}
+        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--bg-surface)', border: '1px solid var(--grid-line-major)', color: 'var(--text-loud)' }}
       >
-        <Calendar size={15} color="#94a3b8" />
-        <span>{getButtonLabel()}</span>
-        <ChevronDown size={14} color="#64748b" />
+        <Calendar size={15} color="var(--text-muted)" />
+        <span style={{ fontWeight: 600 }}>{getButtonLabel()}</span>
+        <ChevronDown size={14} color="var(--text-muted)" />
       </button>
 
       {isOpen && (
@@ -93,10 +93,10 @@ export default function DateFilter({ onFilterChange, defaultMode = 'all' }: Date
           top: '100%',
           right: 0,
           marginTop: '0.5rem',
-          background: '#090d16',
-          border: '1px solid #1e293b',
+          background: 'var(--bg-surface)',
+          border: '1px solid var(--grid-line-major)',
           borderRadius: '8px',
-          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)',
+          boxShadow: 'var(--shadow-drop-layer)',
           zIndex: 50,
           minWidth: '220px',
           overflow: 'hidden'
@@ -108,7 +108,7 @@ export default function DateFilter({ onFilterChange, defaultMode = 'all' }: Date
             <button className="dropdown-item" onClick={() => applyPreset('this_week')}>This Week</button>
             <button className="dropdown-item" onClick={() => applyPreset('this_month')}>This Month</button>
             
-            <div style={{ borderTop: '1px solid #1e293b', margin: '0.25rem 0' }}></div>
+            <div style={{ borderTop: '1px solid var(--grid-line-major)', margin: '0.25rem 0' }}></div>
             
             <button className="dropdown-item" onClick={() => setMode('custom_date')}>Specific Date...</button>
             {mode === 'custom_date' && (
@@ -117,7 +117,7 @@ export default function DateFilter({ onFilterChange, defaultMode = 'all' }: Date
                   type="date" 
                   value={customDate} 
                   onChange={e => setCustomDate(e.target.value)} 
-                  style={{ background: '#0f172a', border: '1px solid #334155', color: '#f8fafc', padding: '0.5rem', borderRadius: '4px' }}
+                  style={{ background: 'var(--bg-app)', border: '1px solid var(--grid-line-major)', color: 'var(--text-loud)', padding: '0.5rem', borderRadius: '4px' }}
                 />
                 <button className="primary-btn" onClick={handleCustomDateSubmit} style={{ width: '100%' }}>Apply</button>
               </div>
@@ -130,13 +130,13 @@ export default function DateFilter({ onFilterChange, defaultMode = 'all' }: Date
                   type="date" 
                   value={startDate} 
                   onChange={e => setStartDate(e.target.value)} 
-                  style={{ background: '#0f172a', border: '1px solid #334155', color: '#f8fafc', padding: '0.5rem', borderRadius: '4px' }}
+                  style={{ background: 'var(--bg-app)', border: '1px solid var(--grid-line-major)', color: 'var(--text-loud)', padding: '0.5rem', borderRadius: '4px' }}
                 />
                 <input 
                   type="date" 
                   value={endDate} 
                   onChange={e => setEndDate(e.target.value)} 
-                  style={{ background: '#0f172a', border: '1px solid #334155', color: '#f8fafc', padding: '0.5rem', borderRadius: '4px' }}
+                  style={{ background: 'var(--bg-app)', border: '1px solid var(--grid-line-major)', color: 'var(--text-loud)', padding: '0.5rem', borderRadius: '4px' }}
                 />
                 <button className="primary-btn" onClick={handleDateRangeSubmit} style={{ width: '100%' }}>Apply Range</button>
               </div>
@@ -149,16 +149,18 @@ export default function DateFilter({ onFilterChange, defaultMode = 'all' }: Date
         .dropdown-item {
           background: transparent;
           border: none;
-          color: #cbd5e1;
+          color: var(--text-loud);
           padding: 0.75rem 1rem;
           text-align: left;
           cursor: pointer;
           font-size: 0.85rem;
+          font-weight: 500;
           width: 100%;
+          transition: background 0.15s ease;
         }
         .dropdown-item:hover {
-          background: #1e293b;
-          color: #f8fafc;
+          background: var(--bg-surface-hover);
+          color: var(--text-loud);
         }
       `}} />
     </div>

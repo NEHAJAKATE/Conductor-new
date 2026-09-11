@@ -93,8 +93,8 @@ export default function PurchasesPage() {
 
           {report?.status === 'NOT_CONNECTED' ? (
             <div style={{
-              background: '#090d16',
-              border: '1px solid #1e293b',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--grid-line-major)',
               borderRadius: '12px',
               padding: '3rem 2rem',
               textAlign: 'center',
@@ -104,10 +104,10 @@ export default function PurchasesPage() {
               gap: '1rem',
               margin: '1.5rem 0'
             }}>
-              <ShoppingBag size={42} color="#64748b" />
+              <ShoppingBag size={42} color="var(--text-muted)" />
               <div>
-                <h3 style={{ margin: '0 0 0.5rem 0', color: '#f8fafc', fontSize: '1.15rem' }}>Purchase Dataset Not Connected</h3>
-                <p style={{ margin: 0, color: '#94a3b8', maxWidth: '540px', fontSize: '0.875rem', lineHeight: 1.5 }}>
+                <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-loud)', fontSize: '1.15rem' }}>Purchase Dataset Not Connected</h3>
+                <p style={{ margin: 0, color: 'var(--text-muted)', maxWidth: '540px', fontSize: '0.875rem', lineHeight: 1.5 }}>
                   No ERP purchase journal or supplier invoices have been ingested yet. Ingest your purchase analysis CSV or connect your ERP source to view procurement spend and Input Tax Credit (ITC).
                 </p>
               </div>
@@ -131,24 +131,24 @@ export default function PurchasesPage() {
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                      <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                         Loading purchase intelligence...
                       </td>
                     </tr>
                   ) : !report || report.rows.length === 0 ? (
                     <tr>
-                      <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                      <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                         No purchase records found matching filter.
                       </td>
                     </tr>
                   ) : (
                     report.rows.map((row: any, i: number) => (
                       <tr key={i}>
-                        <td style={{ fontWeight: 600, color: '#f8fafc' }}>{row.dimension}</td>
-                        <td style={{ fontWeight: 600, color: '#fbbf24' }}>₹{row.spend.toLocaleString()}</td>
-                        <td style={{ color: '#94a3b8' }}>₹{row.tax.toLocaleString()}</td>
-                        <td style={{ fontWeight: 600, color: '#f8fafc' }}>₹{row.gross.toLocaleString()}</td>
-                        <td>{row.units.toLocaleString()}</td>
+                        <td style={{ fontWeight: 700, color: 'var(--text-loud)', fontSize: '0.925rem' }}>{row.dimension}</td>
+                        <td style={{ fontWeight: 800, color: 'var(--color-warning)' }}>₹{row.spend.toLocaleString()}</td>
+                        <td style={{ color: 'var(--text-muted)', fontWeight: 500 }}>₹{row.tax.toLocaleString()}</td>
+                        <td style={{ fontWeight: 800, color: 'var(--text-loud)' }}>₹{row.gross.toLocaleString()}</td>
+                        <td style={{ fontWeight: 600, color: 'var(--text-loud)' }}>{row.units.toLocaleString()}</td>
                         <td><span className="badge badge-neutral">{row.invoices}</span></td>
                       </tr>
                     ))

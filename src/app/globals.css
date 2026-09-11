@@ -1,41 +1,61 @@
 :root {
-  /* Default to Dark Theme variables (Perform Digital Blue-Gray) */
-  --bg-app: #0f161e; /* Darkened by 27% */
-  --bg-surface: #1f2d3d; /* Official Perform Digital Dark */
-  --bg-surface-hover: #26364a;
+  /* Dark Theme — Professional Enterprise Slate & Pharma Emerald */
+  --bg-app: #0c1219;
+  --bg-surface: #151f2c;
+  --bg-surface-hover: #1c2a3b;
   --text-loud: #ffffff;
   --text-default: #e2e8f0;
   --text-muted: #94a3b8;
-  --grid-line-major: #334155;
-  --grid-line-minor: #1e293b;
-  --accent-primary: #5cb198; /* Perform Digital Green Accent */
-  --accent-secondary: #cda849; /* Perform Digital Gold/Yellow */
+  --grid-line-major: #253346;
+  --grid-line-minor: #182230;
+  --accent-primary: #0d9488;    /* Pharma Emerald */
+  --accent-primary-hover: #0f766e;
+  --accent-secondary: #3b82f6;  /* ERP Enterprise Blue */
   
-  --shadow-inset-heavy: 0 0 24px 0px #0f172a inset, 0 0.5px 0px 0.75px #334155;
-  --shadow-drop-layer: 6px 37px 10px 0px rgba(0, 0, 0, 0.01), 4px 24px 10px 0px rgba(0, 0, 0, 0.04), 2px 13px 8px 0px rgba(0, 0, 0, 0.14), 1px 6px 6px 0px rgba(0, 0, 0, 0.24), 0px 1px 3px 0px rgba(0, 0, 0, 0.27);
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #f43f5e;
+  --color-info: #3b82f6;
+
+  --purchases-color: #60a5fa;
+  --sales-color: #f87171;
+
+  --shadow-inset-heavy: inset 0 1px 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-drop-layer: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.25), 0 1px 2px -1px rgba(0, 0, 0, 0.2);
   
-  --radius-sm: 4px;
+  --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
 
-  /* High density SVG noise to simulate the packed grain */
-  --noise-url: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='4' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='1 0 0 0 0, 0 1 0 0 0, 0 0 1 0 0, 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.4'/%3E%3C/svg%3E");
+  --noise-url: none;
 }
 
 [data-theme='light'] {
-  --bg-app: #fcf8f8;
+  /* Light Theme — High Contrast Executive Accounting & Clean Pharma Wholesale */
+  --bg-app: #f8fafc;
   --bg-surface: #ffffff;
-  --bg-surface-hover: #f9f1f1;
-  --text-loud: #14141C;
-  --text-default: #31263B;
-  --text-muted: #89828d;
-  --grid-line-major: #dbd7da;
-  --grid-line-minor: #e9e5e8;
-  --accent-primary: #31263B;
-  --accent-secondary: #A477B2;
+  --bg-surface-hover: #f1f5f9;
+  --text-loud: #020617;        /* Pure solid slate-black for 100% legibility */
+  --text-default: #0f172a;     /* Deep slate-900 body text */
+  --text-muted: #334155;       /* Solid crisp slate-700 secondary text */
+  --grid-line-major: #cbd5e1;
+  --grid-line-minor: #f1f5f9;
+  --accent-primary: #0d9488;
+  --accent-primary-hover: #0f766e;
+  --accent-secondary: #2563eb;
   
-  --shadow-inset-heavy: 0 0 24px 0px #ffffff inset, 0 0.5px 0px 0.75px #e4e0e3;
-  --shadow-drop-layer: 6px 37px 10px 0px rgba(0, 0, 0, 0.01), 4px 24px 10px 0px rgba(0, 0, 0, 0.02), 2px 13px 8px 0px rgba(0, 0, 0, 0.06), 1px 6px 6px 0px rgba(0, 0, 0, 0.08), 0px 1px 3px 0px rgba(0, 0, 0, 0.1);
+  --color-success: #059669;
+  --color-warning: #d97706;
+  --color-danger: #dc2626;
+  --color-info: #2563eb;
+
+  --purchases-color: #2563eb;  /* Deep readable blue */
+  --sales-color: #dc2626;      /* High-contrast accounting red */
+
+  --shadow-inset-heavy: inset 0 1px 0 0 rgba(255, 255, 255, 0.8);
+  --shadow-drop-layer: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
 }
 
 * {
@@ -53,32 +73,21 @@ body {
   min-height: 100vh;
 }
 
-/* High Density Packed Noise Overlay */
+/* Clean ERP Studio Canvas */
 .noise-overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  pointer-events: none;
-  z-index: 9999;
-  background-image: var(--noise-url);
-  background-size: 128px 128px;
-  opacity: 0.15;
-  mix-blend-mode: overlay;
+  display: none;
 }
 
-[data-theme='light'] .noise-overlay {
-  mix-blend-mode: multiply;
-  opacity: 0.08;
-}
-
-/* Studio Canvas Blueprint Grid */
+/* Subtle Canvas Grid */
 .studio-grid {
-  background-size: 12px 12px; /* 1/4th the area for denser packing */
+  background-size: 16px 16px;
   background-image:
     linear-gradient(to right, var(--grid-line-minor) 1px, transparent 1px),
     linear-gradient(to bottom, var(--grid-line-minor) 1px, transparent 1px);
   position: absolute;
   inset: 0;
   z-index: 0;
+  opacity: 0.2;
 }
 
 /* Corner Crosshair Accent Component */
@@ -104,8 +113,10 @@ body {
   position: relative;
   text-align: left;
   border-radius: var(--radius-lg);
-  background-image: radial-gradient(circle at 66.66% 50%, color-mix(in srgb, var(--bg-surface) 90%, transparent) 0%, color-mix(in srgb, var(--bg-app) 90%, transparent) 100%);
-  box-shadow: var(--shadow-inset-heavy), var(--shadow-drop-layer);
+  border: 1px solid var(--grid-line-major);
+  background-color: var(--bg-surface);
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
   z-index: 10;
 }
 

@@ -559,7 +559,7 @@ export class ReportService {
       const bKey = item.manufacturer || 'General Catalog';
       const curr = brandMap.get(bKey) || { brand: bKey, count: 0, totalUnits: 0 };
       curr.count += 1;
-      curr.totalUnits += item.calculatedClosingStock;
+      curr.totalUnits += item.calculatedClosingStock || 0;
       brandMap.set(bKey, curr);
     });
 

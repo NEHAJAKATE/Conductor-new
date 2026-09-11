@@ -129,22 +129,22 @@ export default function InventoryPage() {
             </button>
           </div>
 
-          <div className="tabs-container" style={{ marginBottom: '1.5rem', borderBottom: '1px solid #1e293b', display: 'flex', gap: '2rem' }}>
+          <div className="tabs-container" style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--grid-line-major)', display: 'flex', gap: '2rem' }}>
             <button 
               className={`tab-btn ${activeTab === 'stock' ? 'active' : ''}`}
               onClick={() => setActiveTab('stock')}
-              style={{ padding: '0.75rem 0', background: 'transparent', border: 'none', color: activeTab === 'stock' ? '#f8fafc' : '#64748b', borderBottom: activeTab === 'stock' ? '2px solid #3b82f6' : '2px solid transparent', cursor: 'pointer', fontWeight: 600 }}
+              style={{ padding: '0.75rem 0', background: 'transparent', border: 'none', color: activeTab === 'stock' ? 'var(--text-loud)' : 'var(--text-muted)', borderBottom: activeTab === 'stock' ? '2px solid var(--accent-primary)' : '2px solid transparent', cursor: 'pointer', fontWeight: 700 }}
             >
               All Stock
             </button>
             <button 
               className={`tab-btn ${activeTab === 'reorder' ? 'active' : ''}`}
               onClick={() => setActiveTab('reorder')}
-              style={{ padding: '0.75rem 0', background: 'transparent', border: 'none', color: activeTab === 'reorder' ? '#f8fafc' : '#64748b', borderBottom: activeTab === 'reorder' ? '2px solid #3b82f6' : '2px solid transparent', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              style={{ padding: '0.75rem 0', background: 'transparent', border: 'none', color: activeTab === 'reorder' ? 'var(--text-loud)' : 'var(--text-muted)', borderBottom: activeTab === 'reorder' ? '2px solid var(--accent-primary)' : '2px solid transparent', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
             >
               Reorder Alerts
               {reorderItems.length > 0 && (
-                <span style={{ background: '#f87171', color: '#fff', fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: '10px' }}>
+                <span style={{ background: 'var(--color-danger)', color: '#fff', fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: '10px', fontWeight: 700 }}>
                   {reorderItems.length}
                 </span>
               )}
@@ -153,7 +153,7 @@ export default function InventoryPage() {
 
           <div className="action-bar">
             <form onSubmit={handleSearchSubmit} className="search-input-group">
-              <Search size={16} color="#64748b" />
+              <Search size={16} color="var(--text-muted)" />
               <input 
                 type="text" 
                 placeholder="Search product name or manufacturer..." 
@@ -166,8 +166,8 @@ export default function InventoryPage() {
 
           {report?.status === 'NOT_CONNECTED' ? (
             <div style={{
-              background: '#090d16',
-              border: '1px solid #1e293b',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--grid-line-major)',
               borderRadius: '12px',
               padding: '3rem 2rem',
               textAlign: 'center',
@@ -177,10 +177,10 @@ export default function InventoryPage() {
               gap: '1rem',
               margin: '1.5rem 0'
             }}>
-              <Package size={42} color="#64748b" />
+              <Package size={42} color="var(--text-muted)" />
               <div>
-                <h3 style={{ margin: '0 0 0.5rem 0', color: '#f8fafc', fontSize: '1.15rem' }}>Inventory Not Connected</h3>
-                <p style={{ margin: 0, color: '#94a3b8', maxWidth: '540px', fontSize: '0.875rem', lineHeight: 1.5 }}>
+                <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-loud)', fontSize: '1.15rem' }}>Inventory Not Connected</h3>
+                <p style={{ margin: 0, color: 'var(--text-muted)', maxWidth: '540px', fontSize: '0.875rem', lineHeight: 1.5 }}>
                   No physical warehouse inventory or opening stock sheet has been ingested yet.
                 </p>
               </div>
@@ -204,13 +204,13 @@ export default function InventoryPage() {
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                        <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                           Calculating stock ledger...
                         </td>
                       </tr>
                     ) : !report || report.rows.length === 0 ? (
                       <tr>
-                        <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                        <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                           No products found.
                         </td>
                       </tr>
@@ -223,14 +223,14 @@ export default function InventoryPage() {
                           <React.Fragment key={row.productId}>
                             <tr 
                               onClick={() => toggleRowExpansion(row.productId)}
-                              style={{ cursor: 'pointer', background: isExpanded ? 'rgba(59, 130, 246, 0.05)' : 'transparent' }}
+                              style={{ cursor: 'pointer', background: isExpanded ? 'var(--bg-surface-hover)' : 'transparent' }}
                             >
-                              <td style={{ color: '#64748b' }}>
+                              <td style={{ color: 'var(--text-muted)' }}>
                                 {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                               </td>
                               <td>
-                                <div style={{ fontWeight: 600, color: '#f8fafc' }}>{row.productName}</div>
-                                <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+                                <div style={{ fontWeight: 700, color: 'var(--text-loud)', fontSize: '0.925rem' }}>{row.productName}</div>
+                                <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)', fontWeight: 500, marginTop: '2px' }}>
                                   <DataQualityIndicator 
                                     value={row.manufacturer} 
                                     missingText="Manufacturer Not Available" 
@@ -238,7 +238,7 @@ export default function InventoryPage() {
                                   />
                                 </div>
                               </td>
-                              <td>
+                              <td style={{ fontWeight: 600, color: 'var(--text-loud)', fontSize: '0.95rem' }}>
                                 <DataQualityIndicator 
                                   value={row.openingStock} 
                                   type="number"
@@ -246,16 +246,16 @@ export default function InventoryPage() {
                                   issueExplanation={row.openingStock < 0 ? 'Negative opening stock' : undefined}
                                 />
                               </td>
-                              <td style={{ color: '#60a5fa' }}>
+                              <td style={{ fontWeight: 600, color: 'var(--purchases-color)', fontSize: '0.95rem' }}>
                                 {row.purchases ? `+${row.purchases.toLocaleString('en-IN')}` : '—'}
                               </td>
-                              <td style={{ color: '#f43f5e' }}>
+                              <td style={{ fontWeight: 600, color: 'var(--sales-color)', fontSize: '0.95rem' }}>
                                 {row.sales ? `-${row.sales.toLocaleString('en-IN')}` : '—'}
                               </td>
-                              <td style={{ color: totalReturnsAndAdj > 0 ? '#34d399' : totalReturnsAndAdj < 0 ? '#f43f5e' : '#64748b' }}>
+                              <td style={{ fontWeight: 600, color: totalReturnsAndAdj > 0 ? 'var(--color-success)' : totalReturnsAndAdj < 0 ? 'var(--sales-color)' : 'var(--text-muted)', fontSize: '0.95rem' }}>
                                 {totalReturnsAndAdj !== 0 ? (totalReturnsAndAdj > 0 ? `+${totalReturnsAndAdj}` : totalReturnsAndAdj) : '—'}
                               </td>
-                              <td style={{ fontWeight: 700, fontSize: '1.05rem', color: row.calculatedClosingStock !== null && row.calculatedClosingStock < 0 ? '#f87171' : '#f8fafc' }}>
+                              <td style={{ fontWeight: 800, fontSize: '1.1rem', color: row.calculatedClosingStock !== null && row.calculatedClosingStock < 0 ? 'var(--color-danger)' : 'var(--text-loud)' }}>
                                 <DataQualityIndicator 
                                   value={row.calculatedClosingStock} 
                                   type="number"
@@ -265,50 +265,50 @@ export default function InventoryPage() {
                               </td>
                               <td>
                                 {row.stockStatus === 'Healthy' ? (
-                                  <span style={{ fontSize: '0.8rem', color: '#34d399', fontWeight: 500 }}>Healthy</span>
+                                  <span className="badge badge-success">Healthy</span>
                                 ) : row.stockStatus === 'Needs Review' || row.stockStatus === 'Missing Opening Data' ? (
-                                  <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                                  <span className="badge badge-warning">
                                     {row.stockStatus}
                                   </span>
                                 ) : row.stockStatus === 'Out of Stock' ? (
                                   <span className="badge badge-danger">Out of Stock</span>
                                 ) : (
-                                  <span className="badge" style={{ background: 'rgba(248, 113, 113, 0.15)', color: '#f87171', border: '1px solid rgba(248, 113, 113, 0.3)' }}>
+                                  <span className="badge badge-danger">
                                     {row.stockStatus}
                                   </span>
                                 )}
                               </td>
                             </tr>
                             {isExpanded && (
-                              <tr style={{ background: 'rgba(15, 23, 42, 0.5)' }}>
+                              <tr style={{ background: 'var(--bg-surface-hover)' }}>
                                 <td></td>
                                 <td colSpan={7} style={{ padding: '1.5rem', borderTop: 'none' }}>
                                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
                                     
                                     {/* Left Col: Explanation & Reorder */}
                                     <div>
-                                      <h4 style={{ margin: '0 0 0.75rem 0', color: '#f8fafc', fontSize: '0.9rem' }}>Stock Status Explanation</h4>
-                                      <div style={{ background: '#090d16', padding: '1rem', borderRadius: '8px', border: '1px solid #1e293b', fontSize: '0.85rem', color: '#cbd5e1', lineHeight: 1.5, marginBottom: '1rem' }}>
+                                      <h4 style={{ margin: '0 0 0.75rem 0', color: 'var(--text-loud)', fontSize: '0.9rem', fontWeight: 700 }}>Stock Status Explanation</h4>
+                                      <div style={{ background: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--grid-line-major)', fontSize: '0.85rem', color: 'var(--text-default)', lineHeight: 1.5, marginBottom: '1rem' }}>
                                         {row.reorderRationale || 'Status is normal.'}
                                       </div>
 
-                                      <h4 style={{ margin: '0 0 0.75rem 0', color: '#f8fafc', fontSize: '0.9rem' }}>Reorder Policy</h4>
-                                      <div style={{ background: '#090d16', padding: '1rem', borderRadius: '8px', border: '1px solid #1e293b', display: 'flex', gap: '2rem' }}>
+                                      <h4 style={{ margin: '0 0 0.75rem 0', color: 'var(--text-loud)', fontSize: '0.9rem', fontWeight: 700 }}>Reorder Policy</h4>
+                                      <div style={{ background: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--grid-line-major)', display: 'flex', gap: '2rem' }}>
                                         <div>
-                                          <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>Avg Monthly Sales</div>
-                                          <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#f8fafc' }}>
+                                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Avg Monthly Sales</div>
+                                          <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-loud)' }}>
                                             <DataQualityIndicator value={row.monthlyBaselineConsumption} type="number" />
                                           </div>
                                         </div>
                                         <div>
-                                          <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>Reorder Threshold</div>
-                                          <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#fbbf24' }}>
+                                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Reorder Threshold</div>
+                                          <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-warning)' }}>
                                             <DataQualityIndicator value={row.reorderThreshold} type="number" />
                                           </div>
                                         </div>
                                         <div>
-                                          <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>Suggested Order</div>
-                                          <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#34d399' }}>
+                                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Suggested Order</div>
+                                          <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-success)' }}>
                                             <DataQualityIndicator value={row.suggestedReorderQty} type="number" />
                                           </div>
                                         </div>
@@ -317,52 +317,52 @@ export default function InventoryPage() {
 
                                     {/* Right Col: Calculation Breakdown */}
                                     <div>
-                                      <h4 style={{ margin: '0 0 0.75rem 0', color: '#f8fafc', fontSize: '0.9rem' }}>Calculation Breakdown</h4>
-                                      <div style={{ background: '#090d16', padding: '1rem', borderRadius: '8px', border: '1px solid #1e293b', fontSize: '0.85rem' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid #1e293b' }}>
-                                          <span style={{ color: '#94a3b8' }}>Opening Stock</span>
-                                          <span style={{ fontWeight: 500 }}><DataQualityIndicator value={row.openingStock} /></span>
+                                      <h4 style={{ margin: '0 0 0.75rem 0', color: 'var(--text-loud)', fontSize: '0.9rem', fontWeight: 700 }}>Calculation Breakdown</h4>
+                                      <div style={{ background: 'var(--bg-app)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--grid-line-major)', fontSize: '0.85rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid var(--grid-line-major)' }}>
+                                          <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Opening Stock</span>
+                                          <span style={{ fontWeight: 700, color: 'var(--text-loud)' }}><DataQualityIndicator value={row.openingStock} /></span>
                                         </div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.5rem' }}>
-                                          <span style={{ color: '#94a3b8' }}>Purchases</span>
-                                          <span style={{ color: '#60a5fa' }}>+{row.purchases || 0}</span>
+                                          <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Purchases</span>
+                                          <span style={{ color: 'var(--purchases-color)', fontWeight: 700 }}>+{row.purchases || 0}</span>
                                         </div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.25rem' }}>
-                                          <span style={{ color: '#94a3b8' }}>Sales Returns (Stock In)</span>
-                                          <span style={{ color: '#60a5fa' }}>+{row.salesReturns || 0}</span>
+                                          <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Sales Returns (Stock In)</span>
+                                          <span style={{ color: 'var(--purchases-color)', fontWeight: 700 }}>+{row.salesReturns || 0}</span>
                                         </div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.25rem' }}>
-                                          <span style={{ color: '#94a3b8' }}>Stock Adjustments (In)</span>
-                                          <span style={{ color: '#60a5fa' }}>+{row.adjustments || 0}</span>
+                                          <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Stock Adjustments (In)</span>
+                                          <span style={{ color: 'var(--purchases-color)', fontWeight: 700 }}>+{row.adjustments || 0}</span>
                                         </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.5rem', borderTop: '1px dashed #1e293b', marginTop: '0.5rem' }}>
-                                          <span style={{ color: '#94a3b8' }}>Sales</span>
-                                          <span style={{ color: '#f43f5e' }}>-{row.sales || 0}</span>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.5rem', borderTop: '1px dashed var(--grid-line-major)', marginTop: '0.5rem' }}>
+                                          <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Sales</span>
+                                          <span style={{ color: 'var(--sales-color)', fontWeight: 700 }}>-{row.sales || 0}</span>
                                         </div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.25rem' }}>
-                                          <span style={{ color: '#94a3b8' }}>Purchase Returns (Stock Out)</span>
-                                          <span style={{ color: '#f43f5e' }}>-{row.purchaseReturns || 0}</span>
+                                          <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Purchase Returns (Stock Out)</span>
+                                          <span style={{ color: 'var(--sales-color)', fontWeight: 700 }}>-{row.purchaseReturns || 0}</span>
                                         </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.25rem', paddingBottom: '0.5rem', borderBottom: '1px solid #1e293b' }}>
-                                          <span style={{ color: '#94a3b8' }}>Breakage</span>
-                                          <span style={{ color: '#f43f5e' }}>-{row.breakage || 0}</span>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.25rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--grid-line-major)' }}>
+                                          <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Breakage</span>
+                                          <span style={{ color: 'var(--sales-color)', fontWeight: 700 }}>-{row.breakage || 0}</span>
                                         </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.5rem', fontWeight: 600, fontSize: '1rem', color: row.calculatedClosingStock !== null && row.calculatedClosingStock < 0 ? '#f87171' : '#f8fafc' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.5rem', fontWeight: 800, fontSize: '1rem', color: row.calculatedClosingStock !== null && row.calculatedClosingStock < 0 ? 'var(--color-danger)' : 'var(--text-loud)' }}>
                                           <span>Closing Stock</span>
                                           <span><DataQualityIndicator value={row.calculatedClosingStock} /></span>
                                         </div>
                                       </div>
 
-                                      <div style={{ marginTop: '1.5rem', borderTop: '1px solid #1e293b', paddingTop: '1.5rem' }}>
+                                      <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--grid-line-major)', paddingTop: '1.5rem' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                           <div>
-                                            <h4 style={{ margin: '0 0 0.25rem 0', color: '#f8fafc', fontSize: '0.9rem' }}>Customer & Movement Ledger</h4>
-                                            <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.8rem', maxWidth: '300px', lineHeight: 1.4 }}>View all businesses and customers who bought this product, exactly like a wholesaler ERP.</p>
+                                            <h4 style={{ margin: '0 0 0.25rem 0', color: 'var(--text-loud)', fontSize: '0.9rem', fontWeight: 700 }}>Customer & Movement Ledger</h4>
+                                            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.8rem', maxWidth: '300px', lineHeight: 1.4 }}>View all businesses and customers who bought this product, exactly like a wholesaler ERP.</p>
                                           </div>
                                           <Link href={`/item-ledger?search=${encodeURIComponent(row.productName)}`} passHref>
-                                            <button className="secondary-btn" style={{ fontSize: '0.85rem', padding: '0.5rem 1rem', background: '#1e293b', color: '#f8fafc', border: 'none', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <button className="secondary-btn" style={{ fontSize: '0.85rem', padding: '0.5rem 1rem' }}>
                                               <FileText size={14} />
-                                              View Item Ledger
+                                              <span>View Item Ledger</span>
                                             </button>
                                           </Link>
                                         </div>
@@ -393,7 +393,7 @@ export default function InventoryPage() {
                   <tbody>
                     {reorderItems.length === 0 ? (
                       <tr>
-                        <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                        <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                           No products currently need reordering.
                         </td>
                       </tr>
@@ -403,20 +403,20 @@ export default function InventoryPage() {
                         return (
                           <tr key={row.productId}>
                             <td>
-                              <div style={{ fontWeight: 600, color: '#f8fafc' }}>{row.productName}</div>
-                              <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{row.manufacturer || 'Manufacturer Not Available'}</div>
+                              <div style={{ fontWeight: 700, color: 'var(--text-loud)', fontSize: '0.925rem' }}>{row.productName}</div>
+                              <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)', fontWeight: 500, marginTop: '2px' }}>{row.manufacturer || 'Manufacturer Not Available'}</div>
                             </td>
-                            <td>{row.monthlyBaselineConsumption?.toLocaleString('en-IN') || '—'} / month</td>
-                            <td style={{ fontWeight: 700, color: row.calculatedClosingStock === 0 ? '#f87171' : '#fbbf24' }}>
+                            <td style={{ fontWeight: 600, color: 'var(--text-loud)' }}>{row.monthlyBaselineConsumption?.toLocaleString('en-IN') || '—'} / month</td>
+                            <td style={{ fontWeight: 800, fontSize: '1rem', color: row.calculatedClosingStock === 0 ? 'var(--color-danger)' : 'var(--color-warning)' }}>
                               {row.calculatedClosingStock ?? '—'}
                             </td>
-                            <td style={{ color: '#94a3b8' }}>{row.reorderThreshold ?? '—'}</td>
+                            <td style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{row.reorderThreshold ?? '—'}</td>
                             <td>
                               <span className="badge badge-danger">{row.stockStatus}</span>
                             </td>
                             <td>
                               {isDrafted ? (
-                                <button className="secondary-btn" disabled style={{ background: 'rgba(16, 185, 129, 0.15)', borderColor: '#10b981', color: '#34d399', fontSize: '0.75rem', padding: '0.35rem 0.65rem' }}>
+                                <button className="secondary-btn" disabled style={{ background: 'rgba(16, 185, 129, 0.15)', borderColor: '#10b981', color: '#10b981', fontSize: '0.75rem', padding: '0.35rem 0.65rem' }}>
                                   <CheckCircle2 size={12} color="#10b981" />
                                   <span>PO Drafted</span>
                                 </button>
@@ -424,7 +424,7 @@ export default function InventoryPage() {
                                 <button 
                                   className="primary-btn" 
                                   onClick={() => handleOpenReorderModal(row)}
-                                  style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem', background: '#3b82f6' }}
+                                  style={{ fontSize: '0.75rem', padding: '0.35rem 0.65rem' }}
                                 >
                                   <PlusCircle size={12} />
                                   <span>Draft PO</span>
@@ -445,82 +445,82 @@ export default function InventoryPage() {
         {/* Guided Procurement PO Draft Modal */}
         {activeReorderItem && (
           <div className="modal-backdrop" onClick={() => setActiveReorderItem(null)}>
-            <div className="modal-content" style={{ maxWidth: '600px' }} onClick={e => e.stopPropagation()}>
-              <div className="modal-header">
+            <div className="modal-content" style={{ maxWidth: '600px', background: 'var(--bg-surface)', border: '1px solid var(--grid-line-major)' }} onClick={e => e.stopPropagation()}>
+              <div className="modal-header" style={{ borderBottom: '1px solid var(--grid-line-major)', padding: '1.25rem' }}>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#fff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <FileText size={18} color="#60a5fa" />
+                  <h3 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--text-loud)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700 }}>
+                    <FileText size={18} color="var(--accent-secondary)" />
                     <span>Generate Procurement Purchase Order Draft</span>
                   </h3>
-                  <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8' }}>
-                    Product: <strong style={{ color: '#f8fafc' }}>{activeReorderItem.productName}</strong>
+                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    Product: <strong style={{ color: 'var(--text-loud)' }}>{activeReorderItem.productName}</strong>
                   </p>
                 </div>
                 <button 
                   onClick={() => setActiveReorderItem(null)}
-                  style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
                 >
                   <X size={20} />
                 </button>
               </div>
 
-              <div className="modal-body">
+              <div className="modal-body" style={{ padding: '1.25rem' }}>
                 {/* Stock Math Breakdown */}
                 <div style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(3, 1fr)',
                   gap: '0.75rem',
-                  background: '#090d16',
+                  background: 'var(--bg-app)',
                   padding: '0.875rem',
                   borderRadius: '8px',
-                  border: '1px solid #1e293b'
+                  border: '1px solid var(--grid-line-major)'
                 }}>
                   <div>
-                    <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>Current Stock</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f87171' }}>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Current Stock</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--color-danger)' }}>
                       {activeReorderItem.calculatedClosingStock ?? '—'} Units
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>Reorder Threshold</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fbbf24' }}>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Reorder Threshold</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--color-warning)' }}>
                       {activeReorderItem.reorderThreshold ?? '—'} Units
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>Suggested Order</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#34d399' }}>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Suggested Order</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--color-success)' }}>
                       {activeReorderItem.suggestedReorderQty || 30} Units
                     </div>
                   </div>
                 </div>
 
-                <div style={{ fontSize: '0.8rem', color: '#94a3b8', background: 'rgba(59, 130, 246, 0.08)', padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid rgba(59, 130, 246, 0.2)', marginTop: '1rem' }}>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-default)', background: 'var(--bg-surface-hover)', padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid var(--grid-line-major)', marginTop: '1rem' }}>
                   <strong>Procurement Safety Rule:</strong> Calculated using average monthly sales coverage. A recommendation is not a financial commitment until formally approved.
                 </div>
 
                 {/* Form fields */}
                 <div style={{ marginTop: '1.5rem' }}>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.3rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-loud)', marginBottom: '0.3rem' }}>
                     Target Supplier / Manufacturer:
                   </label>
                   <input 
                     type="text" 
                     className="filter-select" 
-                    style={{ width: '100%', background: '#090d16' }}
+                    style={{ width: '100%', background: 'var(--bg-app)', color: 'var(--text-loud)' }}
                     value={targetSupplier}
                     onChange={e => setTargetSupplier(e.target.value)}
                   />
                 </div>
 
                 <div style={{ marginTop: '1rem' }}>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.3rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-loud)', marginBottom: '0.3rem' }}>
                     Order Quantity (Units):
                   </label>
                   <input 
                     type="number" 
                     className="filter-select" 
-                    style={{ width: '100%', background: '#090d16' }}
+                    style={{ width: '100%', background: 'var(--bg-app)', color: 'var(--text-loud)' }}
                     value={orderQuantity}
                     min={1}
                     onChange={e => setOrderQuantity(parseInt(e.target.value) || 1)}
@@ -535,7 +535,6 @@ export default function InventoryPage() {
                     className="primary-btn" 
                     onClick={handleApproveDraftPO}
                     disabled={isSubmittingPO}
-                    style={{ background: '#3b82f6' }}
                   >
                     {isSubmittingPO ? (
                       <>

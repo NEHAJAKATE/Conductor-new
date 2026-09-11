@@ -23,11 +23,11 @@ export default function DataQualityIndicator({
   const isZero = value === 0 || value === '0';
 
   if (isMissing) {
-    return <span style={{ color: '#64748b', fontStyle: 'italic' }}>{missingText}</span>;
+    return <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>{missingText}</span>;
   }
 
   if (isZero && isZeroMode === 'show_dash') {
-    return <span style={{ color: '#64748b' }}>—</span>;
+    return <span style={{ color: 'var(--text-muted)' }}>—</span>;
   }
 
   const displayValue = type === 'number' && typeof value === 'number'
@@ -39,25 +39,25 @@ export default function DataQualityIndicator({
   if (hasIssue) {
     return (
       <div className="tooltip-container" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-        <span style={{ color: '#f87171', fontWeight: 500 }}>{displayValue}</span>
-        <AlertTriangle size={14} color="#f87171" style={{ cursor: 'help' }} />
+        <span style={{ color: 'var(--color-danger)', fontWeight: 600 }}>{displayValue}</span>
+        <AlertTriangle size={14} color="var(--color-danger)" style={{ cursor: 'help' }} />
         {issueExplanation && (
           <div className="tooltip-content" style={{
             position: 'absolute',
             bottom: '100%',
             left: '50%',
             transform: 'translateX(-50%)',
-            background: '#1e293b',
-            color: '#f8fafc',
+            background: 'var(--bg-surface)',
+            color: 'var(--text-loud)',
             padding: '0.5rem 0.75rem',
             borderRadius: '6px',
             fontSize: '0.75rem',
             width: 'max-content',
             maxWidth: '250px',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+            boxShadow: 'var(--shadow-drop-layer)',
             zIndex: 10,
             marginBottom: '0.5rem',
-            border: '1px solid #334155'
+            border: '1px solid var(--grid-line-major)'
           }}>
             {issueExplanation}
           </div>
@@ -66,5 +66,5 @@ export default function DataQualityIndicator({
     );
   }
 
-  return <span>{displayValue}</span>;
+  return <span style={{ color: 'inherit' }}>{displayValue}</span>;
 }

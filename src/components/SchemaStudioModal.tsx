@@ -469,8 +469,8 @@ export default function SchemaStudioModal({ isOpen, onClose }: SchemaStudioModal
                     <Pencil size={16} color="#60a5fa" />
                     <span>Edit & Rename Schema Parameter</span>
                   </h4>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '3px' }}>
-                    Domain: <strong style={{ color: '#e2e8f0', textTransform: 'capitalize' }}>{editingField.domain}</strong>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '3px' }}>
+                    Domain: <strong style={{ color: 'var(--text-loud)', textTransform: 'capitalize' }}>{editingField.domain}</strong>
                     {editingField.isCustom ? ' (Custom Field)' : ' (Standard ERP Field)'}
                   </div>
                 </div>

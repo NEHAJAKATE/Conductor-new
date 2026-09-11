@@ -133,7 +133,7 @@ export default function ItemLedgerPage() {
       case 'purchase_return': 
       case 'breakage':
         return '#f43f5e'; // Negative flow
-      default: return '#f8fafc';
+      default: return 'var(--text-loud)';
     }
   };
 
@@ -180,8 +180,8 @@ export default function ItemLedgerPage() {
 
           {!report ? (
             <div style={{
-              background: '#090d16',
-              border: '1px solid #1e293b',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--grid-line-major)',
               borderRadius: '12px',
               padding: '4rem 2rem',
               textAlign: 'center',
@@ -189,23 +189,25 @@ export default function ItemLedgerPage() {
               flexDirection: 'column',
               alignItems: 'center',
               gap: '1rem',
+              boxShadow: 'var(--shadow-card)'
             }}>
-              <Package size={48} color="#334155" />
+              <Package size={48} color="var(--text-muted)" />
               <div>
-                <h3 style={{ margin: '0 0 0.5rem 0', color: '#94a3b8', fontSize: '1.15rem' }}>Search for a Product</h3>
-                <p style={{ margin: 0, color: '#64748b', maxWidth: '400px', fontSize: '0.875rem', lineHeight: 1.5 }}>
+                <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-loud)', fontSize: '1.15rem' }}>Search for a Product</h3>
+                <p style={{ margin: 0, color: 'var(--text-muted)', maxWidth: '400px', fontSize: '0.875rem', lineHeight: 1.5 }}>
                   Enter a product name or manufacturer to view its complete movement history and running balance.
                 </p>
               </div>
             </div>
           ) : report.summary === null ? (
             <div style={{
-              background: '#090d16',
-              border: '1px solid #1e293b',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--grid-line-major)',
               borderRadius: '12px',
               padding: '3rem 2rem',
               textAlign: 'center',
-              color: '#94a3b8'
+              color: 'var(--text-muted)',
+              boxShadow: 'var(--shadow-card)'
             }}>
               No product matched your search. Try adjusting your query.
             </div>
@@ -213,24 +215,25 @@ export default function ItemLedgerPage() {
             <>
               {/* Product Summary Card */}
               <div style={{
-                background: '#090d16',
-                border: '1px solid #1e293b',
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--grid-line-major)',
                 borderRadius: '8px',
                 padding: '1.5rem',
-                marginBottom: '1.5rem'
+                marginBottom: '1.5rem',
+                boxShadow: 'var(--shadow-card)'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
                   <div>
-                    <h2 style={{ margin: '0 0 0.25rem 0', color: '#f8fafc', fontSize: '1.25rem' }}>
+                    <h2 style={{ margin: '0 0 0.25rem 0', color: 'var(--text-loud)', fontSize: '1.25rem', fontWeight: 700 }}>
                       {report.summary.productName}
                     </h2>
-                    <div style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 500 }}>
                       {report.summary.manufacturer || 'Manufacturer Not Available'}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase' }}>Current Stock</div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 700, color: report.summary.closingStock < 0 ? '#f87171' : '#34d399' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Current Stock</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: report.summary.closingStock < 0 ? 'var(--color-danger)' : 'var(--color-success)' }}>
                       {report.summary.closingStock.toLocaleString('en-IN')}
                     </div>
                   </div>
@@ -239,20 +242,20 @@ export default function ItemLedgerPage() {
                 {/* Stock Movement Summary */}
                 <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Opening:</div>
-                    <div style={{ fontWeight: 600, color: '#f8fafc' }}>{report.summary.openingStock}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Opening:</div>
+                    <div style={{ fontWeight: 700, color: 'var(--text-loud)' }}>{report.summary.openingStock}</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Purchases:</div>
-                    <div style={{ fontWeight: 600, color: '#60a5fa' }}>+{report.summary.purchases}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Purchases:</div>
+                    <div style={{ fontWeight: 700, color: 'var(--purchases-color)' }}>+{report.summary.purchases}</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Sales:</div>
-                    <div style={{ fontWeight: 600, color: '#f43f5e' }}>-{report.summary.sales}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Sales:</div>
+                    <div style={{ fontWeight: 700, color: 'var(--sales-color)' }}>-{report.summary.sales}</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Returns/Adj:</div>
-                    <div style={{ fontWeight: 600, color: '#34d399' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Returns/Adj:</div>
+                    <div style={{ fontWeight: 700, color: 'var(--color-success)' }}>
                       {report.summary.salesReturns + report.summary.adjustments - report.summary.purchaseReturns - report.summary.breakage}
                     </div>
                   </div>
@@ -276,33 +279,33 @@ export default function ItemLedgerPage() {
                   <tbody>
                     {report.items.length === 0 ? (
                       <tr>
-                        <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                        <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                           No transactions found for the selected period.
                         </td>
                       </tr>
                     ) : (
                       report.items.map((row: any) => (
                         <tr key={row.id}>
-                          <td style={{ color: '#94a3b8' }}>{formatDate(row.date)}</td>
+                          <td style={{ color: 'var(--text-muted)' }}>{formatDate(row.date)}</td>
                           <td>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: '#cbd5e1' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: 'var(--text-default)' }}>
                               {renderTypeIcon(row.type)}
                               <span>{formatTypeLabel(row.type)}</span>
                             </div>
                           </td>
-                          <td style={{ fontWeight: 500, color: '#f8fafc' }}>
+                          <td style={{ fontWeight: 700, color: 'var(--text-loud)' }}>
                             {row.partyName || '—'}
                           </td>
-                          <td style={{ color: '#64748b', fontSize: '0.85rem' }}>
+                          <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                             {row.invoiceId || '—'}
                           </td>
-                          <td style={{ fontWeight: 600, color: getRowColor(row.type) }}>
+                          <td style={{ fontWeight: 700, color: getRowColor(row.type) }}>
                             {row.qtyChange > 0 ? `+${row.qtyChange}` : row.qtyChange}
                           </td>
-                          <td style={{ color: '#cbd5e1' }}>
+                          <td style={{ color: 'var(--text-loud)', fontWeight: 600 }}>
                             <DataQualityIndicator value={row.amount} type="currency" isZeroMode="show_dash" />
                           </td>
-                          <td style={{ fontWeight: 700, color: row.runningBalance < 0 ? '#f87171' : '#f8fafc' }}>
+                          <td style={{ fontWeight: 800, color: row.runningBalance < 0 ? 'var(--color-danger)' : 'var(--text-loud)' }}>
                             <DataQualityIndicator value={row.runningBalance} type="number" />
                           </td>
                         </tr>

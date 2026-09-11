@@ -88,7 +88,7 @@ export default function ReportsPage() {
 
           <div className="action-bar">
             <div className="filter-group">
-              <label style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Target Dataset:</label>
+              <label style={{ fontSize: '0.85rem', color: 'var(--text-loud)', fontWeight: 600 }}>Target Dataset:</label>
               <select 
                 className="filter-select"
                 value={dataset}
@@ -104,7 +104,7 @@ export default function ReportsPage() {
 
             {dataset === 'sales' && (
               <div className="filter-group">
-                <label style={{ fontSize: '0.85rem', color: '#94a3b8' }}>Dimension:</label>
+                <label style={{ fontSize: '0.85rem', color: 'var(--text-loud)', fontWeight: 600 }}>Dimension:</label>
                 <select 
                   className="filter-select"
                   value={groupBy}
@@ -162,13 +162,13 @@ export default function ReportsPage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={10} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                    <td colSpan={10} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                       Processing report aggregation query...
                     </td>
                   </tr>
                 ) : !report || !report.rows || report.rows.length === 0 ? (
                   <tr>
-                    <td colSpan={10} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                    <td colSpan={10} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                       No data points match the selected criteria.
                     </td>
                   </tr>

@@ -201,8 +201,8 @@ For queries, please contact accounts@agrawaltrading.com. Thank you!`;
 
           {report?.status === 'NOT_CONNECTED' ? (
             <div style={{
-              background: '#090d16',
-              border: '1px solid #1e293b',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--grid-line-major)',
               borderRadius: '12px',
               padding: '3rem 2rem',
               textAlign: 'center',
@@ -212,10 +212,10 @@ For queries, please contact accounts@agrawaltrading.com. Thank you!`;
               gap: '1rem',
               margin: '1.5rem 0'
             }}>
-              <AlertTriangle size={42} color="#64748b" />
+              <AlertTriangle size={42} color="var(--text-muted)" />
               <div>
-                <h3 style={{ margin: '0 0 0.5rem 0', color: '#f8fafc', fontSize: '1.15rem' }}>Outstanding Ageing Dataset Not Connected</h3>
-                <p style={{ margin: 0, color: '#94a3b8', maxWidth: '540px', fontSize: '0.875rem', lineHeight: 1.5 }}>
+                <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-loud)', fontSize: '1.15rem' }}>Outstanding Ageing Dataset Not Connected</h3>
+                <p style={{ margin: 0, color: 'var(--text-muted)', maxWidth: '540px', fontSize: '0.875rem', lineHeight: 1.5 }}>
                   No ERP receivables aging ledger has been ingested yet. Ingest your OUTSTANDING ledger CSV or connect your ERP source to view aging interval buckets, overdue risk tiers, and dispatch payment reminders.
                 </p>
               </div>
@@ -241,13 +241,13 @@ For queries, please contact accounts@agrawaltrading.com. Thank you!`;
                 <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                      <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                         Loading outstanding aging matrix...
                       </td>
                     </tr>
                   ) : !report || report.rows.length === 0 ? (
                     <tr>
-                      <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                      <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                         No outstanding records found matching criteria.
                       </td>
                     </tr>
@@ -257,20 +257,20 @@ For queries, please contact accounts@agrawaltrading.com. Thank you!`;
                       return (
                         <tr key={row.businessId}>
                           <td>
-                            <div style={{ fontWeight: 600, color: '#f8fafc' }}>{row.businessName}</div>
+                            <div style={{ fontWeight: 700, color: 'var(--text-loud)', fontSize: '0.925rem' }}>{row.businessName}</div>
                             {row.gstin && (
-                              <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#64748b' }}>
+                              <div style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--text-muted)', marginTop: '2px' }}>
                                 {row.gstin}
                               </div>
                             )}
                           </td>
-                          <td style={{ fontWeight: 700, color: row.totalOutstanding > 0 ? '#f87171' : '#34d399' }}>
+                          <td style={{ fontWeight: 800, fontSize: '1rem', color: row.totalOutstanding > 0 ? 'var(--color-danger)' : 'var(--color-success)' }}>
                             ₹{Math.round(row.totalOutstanding).toLocaleString()}
                           </td>
-                          <td>₹{Math.round(row.bucket0_30).toLocaleString()}</td>
-                          <td>₹{Math.round(row.bucket31_60).toLocaleString()}</td>
-                          <td>₹{Math.round(row.bucket61_90).toLocaleString()}</td>
-                          <td style={{ fontWeight: 600, color: row.bucket90Plus > 0 ? '#f87171' : '#94a3b8' }}>
+                          <td style={{ fontWeight: 600, color: 'var(--text-loud)' }}>₹{Math.round(row.bucket0_30).toLocaleString()}</td>
+                          <td style={{ fontWeight: 600, color: 'var(--text-loud)' }}>₹{Math.round(row.bucket31_60).toLocaleString()}</td>
+                          <td style={{ fontWeight: 600, color: 'var(--text-loud)' }}>₹{Math.round(row.bucket61_90).toLocaleString()}</td>
+                          <td style={{ fontWeight: 800, color: row.bucket90Plus > 0 ? 'var(--color-danger)' : 'var(--text-muted)' }}>
                             ₹{Math.round(row.bucket90Plus).toLocaleString()}
                           </td>
                           <td>{getRiskBadge(row.riskLevel)}</td>
@@ -286,7 +286,7 @@ For queries, please contact accounts@agrawaltrading.com. Thank you!`;
                                 onClick={() => handleOpenReminderModal(row)}
                                 style={{ fontSize: '0.775rem', padding: '0.4rem 0.75rem' }}
                               >
-                                <Send size={12} color="#60a5fa" />
+                                <Send size={12} color="var(--accent-secondary)" />
                                 <span>Reminder</span>
                               </button>
                             )}
@@ -312,42 +312,42 @@ For queries, please contact accounts@agrawaltrading.com. Thank you!`;
                     <span>Send Payment Recovery Reminder</span>
                   </h3>
                   <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8' }}>
-                    Account: <strong style={{ color: '#f8fafc' }}>{activeReminderAccount.businessName}</strong>
+                    Account: <strong style={{ color: 'var(--text-loud)' }}>{activeReminderAccount.businessName}</strong>
                   </p>
                 </div>
                 <button 
                   onClick={() => setActiveReminderAccount(null)}
-                  style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+                  style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
                 >
                   <X size={20} />
                 </button>
               </div>
 
-              <div className="modal-body">
+              <div className="modal-body" style={{ padding: '1.25rem' }}>
                 {/* Balance Summary Header */}
                 <div style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(3, 1fr)',
                   gap: '0.75rem',
-                  background: '#090d16',
+                  background: 'var(--bg-app)',
                   padding: '0.875rem',
                   borderRadius: '8px',
-                  border: '1px solid #1e293b'
+                  border: '1px solid var(--grid-line-major)'
                 }}>
                   <div>
-                    <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>Total Balance</div>
-                    <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f87171' }}>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Total Balance</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--color-danger)' }}>
                       ₹{Math.round(activeReminderAccount.totalOutstanding).toLocaleString()}
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>Overdue (&gt;90 Days)</div>
-                    <div style={{ fontSize: '1rem', fontWeight: 700, color: '#fbbf24' }}>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Overdue (&gt;90 Days)</div>
+                    <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--color-warning)' }}>
                       ₹{Math.round(activeReminderAccount.bucket90Plus || 0).toLocaleString()}
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase' }}>Risk Level</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Risk Level</div>
                     <div style={{ marginTop: '0.2rem' }}>
                       {getRiskBadge(activeReminderAccount.riskLevel)}
                     </div>
@@ -356,7 +356,7 @@ For queries, please contact accounts@agrawaltrading.com. Thank you!`;
 
                 {/* Dispatch Channel Selector */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.4rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-loud)', marginBottom: '0.4rem' }}>
                     Select Dispatch Channel:
                   </label>
                   <div className="channel-tab-group">
@@ -386,13 +386,13 @@ For queries, please contact accounts@agrawaltrading.com. Thank you!`;
 
                 {/* Target Contact */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.3rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-loud)', marginBottom: '0.3rem' }}>
                     Recipient Phone / Email:
                   </label>
                   <input 
                     type="text" 
                     className="filter-select" 
-                    style={{ width: '100%', background: '#090d16' }}
+                    style={{ width: '100%', background: 'var(--bg-app)', color: 'var(--text-loud)' }}
                     value={recipientContact}
                     onChange={e => setRecipientContact(e.target.value)}
                     placeholder="Enter 10-digit mobile or email..."
@@ -401,12 +401,13 @@ For queries, please contact accounts@agrawaltrading.com. Thank you!`;
 
                 {/* Message Template Editor */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#94a3b8', marginBottom: '0.3rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-loud)', marginBottom: '0.3rem' }}>
                     Custom Reminder Notice:
                   </label>
                   <textarea 
                     className="reminder-textarea"
                     rows={6}
+                    style={{ width: '100%', background: 'var(--bg-app)', color: 'var(--text-loud)', border: '1px solid var(--grid-line-major)', borderRadius: '6px', padding: '0.75rem', fontFamily: 'inherit' }}
                     value={customMessage}
                     onChange={e => setCustomMessage(e.target.value)}
                   />
@@ -421,7 +422,7 @@ For queries, please contact accounts@agrawaltrading.com. Thank you!`;
                     className="primary-btn" 
                     onClick={handleDispatchReminder} 
                     disabled={isDispatching}
-                    style={{ background: reminderChannel === 'WHATSAPP' ? '#10b981' : '#3b82f6' }}
+                    style={{ background: reminderChannel === 'WHATSAPP' ? '#059669' : 'var(--accent-primary)' }}
                   >
                     {isDispatching ? (
                       <>

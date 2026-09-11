@@ -125,7 +125,7 @@ async function runMasterAcceptanceTests() {
   const testItem = ledgerSummary.items[0];
 
   const manualCheck = Math.round(
-    (testItem.openingStock + testItem.purchases + testItem.salesReturns - testItem.sales - testItem.purchaseReturns - testItem.breakage + testItem.adjustments) * 100
+    ((testItem.openingStock || 0) + testItem.purchases + testItem.salesReturns - testItem.sales - testItem.purchaseReturns - testItem.breakage + testItem.adjustments) * 100
   ) / 100;
 
   console.log(`  SKU: ${testItem.productName}`);
@@ -145,7 +145,7 @@ async function runMasterAcceptanceTests() {
   // -------------------------------------------------------------------------
   console.log('--- TEST 5: Configurable 25-Strip Reorder Rule Verification ---');
   const lowStockItems = ledgerSummary.items.filter(i => i.isLowStock);
-  const allBelow25 = lowStockItems.every(i => i.calculatedClosingStock <= i.reorderPolicy.reorderThreshold);
+  const allBelow25 = lowStockItems.every(i => (i.calculatedClosingStock || 0) <= i.reorderPolicy.reorderThreshold);
 
   console.log(`  Total Low Stock SKUs Identified: ${lowStockItems.length}`);
   console.log(`  Sample Low Stock: ${lowStockItems[0]?.productName} (Stock: ${lowStockItems[0]?.calculatedClosingStock}, Threshold: ${lowStockItems[0]?.reorderPolicy.reorderThreshold})`);

@@ -246,8 +246,8 @@ export class InventoryLedgerService {
       const isLowStock = stockStatusResult.status === 'Low Stock' || stockStatusResult.status === 'Reorder Now' || stockStatusResult.status === 'Out of Stock';
 
       // ERP reported closing stock (if opening stock is passed as ERP snapshot or matched)
-      const erpReportedClosingStock = hasOpeningStock && !hasTransactions ? openingStock : undefined;
-      const variance = erpReportedClosingStock !== undefined && calculatedClosingStock !== null
+      const erpReportedClosingStock = hasOpeningStock && !hasTransactions && openingStock !== null ? openingStock : undefined;
+      const variance = erpReportedClosingStock !== undefined && erpReportedClosingStock !== null && calculatedClosingStock !== null
         ? Math.round((calculatedClosingStock - erpReportedClosingStock) * 100) / 100 
         : 0;
       

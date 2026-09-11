@@ -167,9 +167,9 @@ export default function IntegrationsPage() {
             <div className="kpi-card">
               <div className="kpi-header">
                 <span>Pipeline Status</span>
-                <CheckCircle2 size={16} />
+                <CheckCircle2 size={16} color="var(--color-success)" />
               </div>
-              <div className="kpi-value" style={{ color: '#34d399' }}>100%</div>
+              <div className="kpi-value" style={{ color: 'var(--color-success)' }}>100%</div>
               <div className="kpi-subtext">0 error records</div>
             </div>
           </div>
@@ -190,13 +190,13 @@ export default function IntegrationsPage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                       Loading scheduled connectors...
                     </td>
                   </tr>
                 ) : jobs.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
                       No scheduled jobs configured.
                     </td>
                   </tr>
@@ -204,31 +204,31 @@ export default function IntegrationsPage() {
                   jobs.map(j => (
                     <tr key={j.id}>
                       <td>
-                        <div style={{ fontWeight: 600, color: '#f8fafc' }}>{j.name}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{j.sourceLocation}</div>
+                        <div style={{ fontWeight: 700, color: 'var(--text-loud)', fontSize: '0.925rem' }}>{j.name}</div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>{j.sourceLocation}</div>
                       </td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                          <FileSpreadsheet size={14} color="#60a5fa" />
-                          <span>{j.sourceType}</span>
+                          <FileSpreadsheet size={14} color="var(--accent-secondary)" />
+                          <span style={{ fontWeight: 600, color: 'var(--text-loud)' }}>{j.sourceType}</span>
                         </div>
                       </td>
                       <td><span className="badge badge-neutral">{j.mode}</span></td>
-                      <td style={{ fontFamily: 'monospace', color: '#94a3b8' }}>
+                      <td style={{ fontFamily: 'monospace', color: 'var(--text-loud)', fontWeight: 600 }}>
                         {j.cronExpression || 'Manual Trigger'}
                       </td>
                       <td>{getStatusBadge(j.lastStatus)}</td>
                       <td>
-                        <span style={{ fontWeight: 600, color: '#f8fafc' }}>
+                        <span style={{ fontWeight: 700, color: 'var(--text-loud)' }}>
                           {j.recordsProcessed?.toLocaleString() || 0}
                         </span>
                         {j.recordsRejected && j.recordsRejected > 0 ? (
-                          <span style={{ color: '#f87171', fontSize: '0.75rem', marginLeft: '0.4rem' }}>
+                          <span style={{ color: 'var(--color-danger)', fontSize: '0.78rem', marginLeft: '0.4rem', fontWeight: 600 }}>
                             ({j.recordsRejected} rejected)
                           </span>
                         ) : null}
                       </td>
-                      <td>
+                      <td style={{ fontWeight: 600, color: 'var(--text-loud)' }}>
                         {j.lastDurationMs 
                           ? `${(j.lastDurationMs / 1000).toFixed(1)}s` 
                           : 'Instant'}
