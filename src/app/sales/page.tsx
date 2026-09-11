@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import ThemeToggle from '@/components/ThemeToggle';
 import ContextualGuidancePanel from '@/components/ContextualGuidancePanel';
+import DateFilter from '@/components/DateFilter';
+import { formatDate, formatINR } from '@/lib/formatters';
 import { 
   TrendingUp, 
   Search, 
@@ -19,13 +21,22 @@ import '../business-pages.css';
 export default function SalesPage() {
   const [report, setReport] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [groupBy, setGroupBy] = useState<'party' | 'product' | 'company' | 'area' | 'route'>('party');
+  const [groupBy, setGroupBy] = useState<'party' | 'product' | 'company' | 'area' | 'route' | 'day' | 'invoice'>('party');
   const [search, setSearch] = useState('');
+  const [startDate, setStartDate] = useState<string | undefined>();
+  const [endDate, setEndDate] = useState<string | undefined>();
 
   const fetchSalesReport = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/v1/reports?dataset=sales&groupBy=${groupBy}&search=${encodeURIComponent(search)}`);
+      const params = new URLSearchParams();
+      params.append('dataset', 'sales');
+      params.append('groupBy', groupBy);
+      if (search) params.append('search', search);
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
+      
+      const res = await fetch(`/api/v1/reports?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setReport(data);
@@ -39,7 +50,7 @@ export default function SalesPage() {
 
   useEffect(() => {
     fetchSalesReport();
-  }, [groupBy]);
+  }, [groupBy, startDate, endDate]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,6 +72,10 @@ export default function SalesPage() {
               <p>Real-time transaction volumes, output GST tax audit, brand distributions, and dealer order frequency</p>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <DateFilter onFilterChange={(start, end) => {
+                setStartDate(start);
+                setEndDate(end);
+              }} />
               <button className="secondary-btn" onClick={fetchSalesReport} disabled={loading}>
                 <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
                 <span>Refresh</span>
@@ -106,6 +121,8 @@ export default function SalesPage() {
                 <option value="company">Pharma Manufacturer</option>
                 <option value="area">Geographic Area</option>
                 <option value="route">Delivery Route</option>
+                <option value="day">Daily Sales</option>
+                <option value="invoice">Detailed Invoices</option>
               </select>
               <button className="primary-btn" onClick={fetchSalesReport}>Update</button>
             </div>
@@ -140,13 +157,19 @@ export default function SalesPage() {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>{groupBy === 'party' ? 'Buying Party' : groupBy === 'product' ? 'Product SKU' : groupBy === 'company' ? 'Manufacturer' : 'Location / Route'}</th>
-                    <th>Category / Info</th>
+                    <th>
+                      {groupBy === 'party' ? 'Buying Party' : 
+                       groupBy === 'product' ? 'Product SKU' : 
+                       groupBy === 'company' ? 'Manufacturer' : 
+                       groupBy === 'day' ? 'Date' :
+                       groupBy === 'invoice' ? 'Invoice ID' : 'Location / Route'}
+                    </th>
+                    <th>{groupBy === 'invoice' ? 'Party / Customer' : 'Category / Info'}</th>
                     <th>Net Invoiced (₹)</th>
                     <th>Output GST (₹)</th>
                     <th>Gross Total (₹)</th>
                     <th>Units Sold</th>
-                    <th>Invoices</th>
+                    {groupBy !== 'invoice' && <th>Invoices</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -165,13 +188,17 @@ export default function SalesPage() {
                   ) : (
                     report.rows.map((row: any, i: number) => (
                       <tr key={i}>
-                        <td style={{ fontWeight: 600, color: '#f8fafc' }}>{row.dimension}</td>
-                        <td style={{ color: '#94a3b8', fontSize: '0.8rem' }}>{row.secondary || 'General'}</td>
-                        <td style={{ fontWeight: 600, color: '#60a5fa' }}>₹{row.revenue.toLocaleString()}</td>
-                        <td style={{ color: '#94a3b8' }}>₹{row.tax.toLocaleString()}</td>
-                        <td style={{ fontWeight: 600, color: '#34d399' }}>₹{row.gross.toLocaleString()}</td>
+                        <td style={{ fontWeight: 600, color: '#f8fafc' }}>
+                          {groupBy === 'day' ? formatDate(row.dimension) : row.dimension}
+                        </td>
+                        <td style={{ color: '#94a3b8', fontSize: '0.8rem' }}>
+                          {groupBy === 'invoice' ? row.partyName : (row.secondary || 'General')}
+                        </td>
+                        <td style={{ fontWeight: 600, color: '#60a5fa' }}>{formatINR(row.revenue)}</td>
+                        <td style={{ color: '#94a3b8' }}>{formatINR(row.tax)}</td>
+                        <td style={{ fontWeight: 600, color: '#34d399' }}>{formatINR(row.gross)}</td>
                         <td>{row.units.toLocaleString()}</td>
-                        <td><span className="badge badge-neutral">{row.invoices}</span></td>
+                        {groupBy !== 'invoice' && <td><span className="badge badge-neutral">{row.invoices}</span></td>}
                       </tr>
                     ))
                   )}

@@ -16,10 +16,13 @@ import {
   ExternalLink,
   X,
   AlertTriangle,
-  RefreshCw
+  RefreshCw,
+  List,
+  FileCheck
 } from 'lucide-react';
 import '../dashboard.css';
 import '../business-pages.css';
+import { formatDate, formatINR } from '@/lib/formatters';
 
 interface Business {
   id: string;
@@ -65,6 +68,50 @@ export default function Business360Page() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClassification, setSelectedClassification] = useState('');
   const [activeBusiness, setActiveBusiness] = useState<Business | null>(null);
+  const [activeTab, setActiveTab] = useState<'profile' | 'ledger' | 'reconciliation'>('profile');
+  const [ledgerData, setLedgerData] = useState<{transactions: any[], outstanding: any} | null>(null);
+  const [ledgerLoading, setLedgerLoading] = useState(false);
+  const [reconData, setReconData] = useState<any>(null);
+  const [reconLoading, setReconLoading] = useState(false);
+
+  useEffect(() => {
+    if (activeBusiness) {
+      const fetchLedger = async () => {
+        try {
+          setLedgerLoading(true);
+          const res = await fetch(`/api/v1/customer-transactions?businessId=${activeBusiness.id}&partyName=${encodeURIComponent(activeBusiness.name)}`);
+          if (res.ok) {
+            setLedgerData(await res.json());
+          }
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setLedgerLoading(false);
+        }
+      };
+      
+      const fetchRecon = async () => {
+        try {
+          setReconLoading(true);
+          const res = await fetch(`/api/v1/reconciliation?account=${encodeURIComponent(activeBusiness.name)}`);
+          if (res.ok) {
+            setReconData(await res.json());
+          }
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setReconLoading(false);
+        }
+      };
+
+      fetchLedger();
+      fetchRecon();
+    } else {
+      setLedgerData(null);
+      setReconData(null);
+      setActiveTab('profile');
+    }
+  }, [activeBusiness]);
 
   const fetchStatsAndList = async () => {
     try {
@@ -340,8 +387,33 @@ export default function Business360Page() {
                   <X size={20} />
                 </button>
               </div>
+              <div className="modal-tabs" style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid #1e293b', padding: '0 1.5rem', background: '#090d16' }}>
+                <button 
+                  className={`tab-btn ${activeTab === 'profile' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('profile')}
+                  style={{ background: 'transparent', border: 'none', padding: '1rem 0', color: activeTab === 'profile' ? '#60a5fa' : '#94a3b8', borderBottom: activeTab === 'profile' ? '2px solid #60a5fa' : '2px solid transparent', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                >
+                  <Building2 size={16} /> Business Profile
+                </button>
+                <button 
+                  className={`tab-btn ${activeTab === 'ledger' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('ledger')}
+                  style={{ background: 'transparent', border: 'none', padding: '1rem 0', color: activeTab === 'ledger' ? '#60a5fa' : '#94a3b8', borderBottom: activeTab === 'ledger' ? '2px solid #60a5fa' : '2px solid transparent', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                >
+                  <List size={16} /> Sales Ledger & Outstanding
+                </button>
+                <button 
+                  className={`tab-btn ${activeTab === 'reconciliation' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('reconciliation')}
+                  style={{ background: 'transparent', border: 'none', padding: '1rem 0', color: activeTab === 'reconciliation' ? '#60a5fa' : '#94a3b8', borderBottom: activeTab === 'reconciliation' ? '2px solid #60a5fa' : '2px solid transparent', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                >
+                  <FileCheck size={16} /> Payments & Reconciliation
+                </button>
+              </div>
               
-              <div className="modal-body">
+              <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+                {activeTab === 'profile' && (
+                  <>
                 <div className="profile-section">
                   <h4>Identity & Registration</h4>
                   <div className="detail-grid">
@@ -485,6 +557,157 @@ export default function Business360Page() {
                           </span>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+                </>
+                )}
+
+                {activeTab === 'ledger' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    {/* Outstanding Buckets */}
+                    {ledgerData?.outstanding && (
+                      <div className="profile-section" style={{ borderLeft: '3px solid #f59e0b', paddingLeft: '1rem' }}>
+                        <h4>Outstanding Balance Breakdown</h4>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+                          <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px' }}>
+                            <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.25rem' }}>0-30 Days</div>
+                            <div style={{ fontSize: '1.2rem', fontWeight: 600, color: '#f8fafc' }}>{formatINR(ledgerData.outstanding.bucket0_30)}</div>
+                          </div>
+                          <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px' }}>
+                            <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.25rem' }}>31-60 Days</div>
+                            <div style={{ fontSize: '1.2rem', fontWeight: 600, color: '#fbbf24' }}>{formatINR(ledgerData.outstanding.bucket31_60)}</div>
+                          </div>
+                          <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px' }}>
+                            <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.25rem' }}>61-90 Days</div>
+                            <div style={{ fontSize: '1.2rem', fontWeight: 600, color: '#f97316' }}>{formatINR(ledgerData.outstanding.bucket61_90)}</div>
+                          </div>
+                          <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px' }}>
+                            <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.25rem' }}>90+ Days</div>
+                            <div style={{ fontSize: '1.2rem', fontWeight: 600, color: '#ef4444' }}>{formatINR(ledgerData.outstanding.bucket90Plus)}</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Transactions */}
+                    <div className="profile-section">
+                      <h4>Transaction History</h4>
+                      {ledgerLoading ? (
+                        <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>Loading transactions...</div>
+                      ) : !ledgerData?.transactions?.length ? (
+                        <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>No transactions found for this customer.</div>
+                      ) : (
+                        <table className="data-table" style={{ width: '100%', fontSize: '0.9rem' }}>
+                          <thead>
+                            <tr>
+                              <th>Date</th>
+                              <th>Type</th>
+                              <th>Invoice No.</th>
+                              <th>Net Amount</th>
+                              <th>Tax Amount</th>
+                              <th>Gross Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {ledgerData.transactions.map((tx: any) => (
+                              <tr key={tx.id}>
+                                <td style={{ color: '#cbd5e1' }}>{formatDate(tx.date)}</td>
+                                <td style={{ textTransform: 'capitalize', color: tx.type === 'sale_return' ? '#34d399' : '#94a3b8' }}>
+                                  {tx.type.replace('_', ' ')}
+                                </td>
+                                <td style={{ fontFamily: 'monospace', color: '#60a5fa' }}>{tx.invoiceId}</td>
+                                <td>{formatINR(tx.netAmount)}</td>
+                                <td>{formatINR(tx.taxAmount)}</td>
+                                <td style={{ fontWeight: 600, color: '#f8fafc' }}>{formatINR(tx.grossAmount)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'reconciliation' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    <div className="profile-section" style={{ borderLeft: '3px solid #10b981', paddingLeft: '1rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                        <h4 style={{ margin: 0 }}>Automated Bank Reconciliation</h4>
+                      </div>
+                      
+                      {reconLoading ? (
+                        <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>Running reconciliation engine...</div>
+                      ) : !reconData || !reconData.items || reconData.items.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+                          No bank ledger entries found for this customer.
+                        </div>
+                      ) : (
+                        <>
+                          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+                            <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px' }}>
+                              <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.25rem' }}>Total Received</div>
+                              <div style={{ fontSize: '1.2rem', fontWeight: 600, color: '#34d399' }}>{formatINR(reconData.totalReceiptAmount)}</div>
+                            </div>
+                            <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px' }}>
+                              <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.25rem' }}>Matched Entries</div>
+                              <div style={{ fontSize: '1.2rem', fontWeight: 600, color: '#60a5fa' }}>{reconData.matchedCount} / {reconData.totalBankEntries}</div>
+                            </div>
+                            <div style={{ flex: 1, background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px' }}>
+                              <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.25rem' }}>Unmatched</div>
+                              <div style={{ fontSize: '1.2rem', fontWeight: 600, color: '#f87171' }}>{reconData.unmatchedCount}</div>
+                            </div>
+                          </div>
+
+                          <table className="data-table" style={{ width: '100%', fontSize: '0.9rem' }}>
+                            <thead>
+                              <tr>
+                                <th>Date</th>
+                                <th>Reference</th>
+                                <th>Amount</th>
+                                <th>Match Status</th>
+                                <th>Linked Invoice</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {reconData.items.map((item: any) => (
+                                <tr key={item.id} style={{ borderLeft: item.matchStatus === 'MATCHED' ? '3px solid #10b981' : item.matchStatus === 'UNMATCHED_BANK' ? '3px solid #f87171' : '3px solid #fbbf24' }}>
+                                  <td style={{ color: '#cbd5e1' }}>{formatDate(item.bankRow.date)}</td>
+                                  <td style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+                                    {item.bankRow.particulars}
+                                  </td>
+                                  <td style={{ fontWeight: 600, color: item.bankRow.type === 'RECEIPT' ? '#34d399' : '#f87171' }}>
+                                    {item.bankRow.type === 'RECEIPT' ? '+' : '-'}{formatINR(item.bankRow.amount)}
+                                  </td>
+                                  <td>
+                                    <span style={{ 
+                                      display: 'inline-block', 
+                                      padding: '0.2rem 0.5rem', 
+                                      borderRadius: '4px', 
+                                      fontSize: '0.75rem',
+                                      fontWeight: 600,
+                                      backgroundColor: item.matchStatus === 'MATCHED' ? 'rgba(16, 185, 129, 0.1)' : item.matchStatus === 'UNMATCHED_BANK' ? 'rgba(248, 113, 113, 0.1)' : 'rgba(251, 191, 36, 0.1)',
+                                      color: item.matchStatus === 'MATCHED' ? '#10b981' : item.matchStatus === 'UNMATCHED_BANK' ? '#f87171' : '#fbbf24'
+                                    }}>
+                                      {item.matchStatus.replace(/_/g, ' ')}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    {item.matchedTransaction ? (
+                                      <div>
+                                        <span style={{ fontFamily: 'monospace', color: '#60a5fa' }}>{item.matchedTransaction.invoiceId}</span>
+                                        <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{formatINR(item.matchedTransaction.grossAmount)}</div>
+                                      </div>
+                                    ) : (
+                                      <span style={{ color: '#64748b', fontStyle: 'italic' }}>None</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
